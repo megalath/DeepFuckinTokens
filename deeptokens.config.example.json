@@ -1,0 +1,15 @@
+{
+  "defaultModel": "gpt",
+  "aliases": {
+    "gpt": "openai-codex/gpt-6.1-sol",
+    "fast": "openai-codex/gpt-5.3-codex-spark"
+  },
+  "defaultThinking": "medium",
+  "maxConcurrent": 3,
+  "worktreeDir": ".deeptokens/worktrees",
+  "branchPrefix": "dt/",
+  "tools": {
+    "read": ["read", "grep", "find", "ls"],
+    "write": ["read", "grep", "find", "ls", "edit", "write"]
+  }
+}

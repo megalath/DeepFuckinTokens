@@ -1,0 +1,25 @@
+{
+  "name": "@deeptokens/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server exposing a pi worker fleet to Claude Code.",
+  "type": "module",
+  "bin": {
+    "deeptokens-mcp": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "@deeptokens/source": "./src/server.ts",
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@deeptokens/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "4.6.5"
+  }
+}

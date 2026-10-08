@@ -1,0 +1,21 @@
+{
+  "name": "@deeptokens/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fleet of pi workers driven by a master harness: spawn, steer, wait, collect, kill.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@deeptokens/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "1.1.0",
+    "zod": "4.6.5"
+  }
+}
