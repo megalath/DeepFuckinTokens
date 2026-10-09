@@ -4,11 +4,12 @@ import { join } from 'node:path'
 
 import type { ProviderStatus } from '../types.js'
 
+/** Works from a clone and from an npm install alike, which `pnpm pi` does not. */
+const PI_COMMAND = 'npx -y @deeptokens/mcp pi'
+
 const LOGIN_HINTS: Readonly<Record<string, string>> = {
-  openai:
-    'Run `pnpm pi`, type `/login openai`, choose "Sign in with ChatGPT" and finish in the browser (headless: paste the final redirect URL back into pi). pi refreshes the token itself.',
-  'openai-codex':
-    'Legacy provider. Prefer `openai` with Sign in with ChatGPT. Otherwise run `pnpm pi`, type `/login openai-codex`.',
+  openai: `Run \`${PI_COMMAND}\`, type \`/login openai\`, choose "Sign in with ChatGPT" and finish in the browser (headless: paste the final redirect URL back into pi). pi refreshes the token itself.`,
+  'openai-codex': `Legacy provider. Prefer \`openai\` with Sign in with ChatGPT. Otherwise run \`${PI_COMMAND}\`, type \`/login openai-codex\`.`,
 }
 
 /** Env vars pi itself accepts as credentials for a provider. */
@@ -41,7 +42,7 @@ export async function providerStatus(
   return providers.map((provider) => {
     const isLoggedIn =
       stored.has(provider) || (ENV_KEYS[provider] ?? []).some((key) => (env[key] ?? '') !== '')
-    const hint = LOGIN_HINTS[provider] ?? `Run \`pnpm pi\`, type \`/login ${provider}\`.`
+    const hint = LOGIN_HINTS[provider] ?? `Run \`${PI_COMMAND}\`, type \`/login ${provider}\`.`
     return isLoggedIn ? { provider, isLoggedIn } : { provider, isLoggedIn, loginHint: hint }
   })
 }

@@ -11,6 +11,7 @@ The `deeptokens` MCP server (`.mcp.json`) gives you `pi_run`, `pi_spawn`, `pi_wa
 - `pnpm lint:boundaries`: dependency-cruiser; fails on an import into another package's subfolder.
 - `pnpm test:live`: real pi; the paid call skips unless logged in
 - `pnpm pi`: pi's own TUI, for `/login openai`
+- `pnpm release`: clean build, `pnpm check`, then publish `core` and `mcp` to npm
 
 ## Layout
 
