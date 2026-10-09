@@ -16,6 +16,8 @@ export type { Fleet } from './lib/fleet/fleet.js'
 export type { AliasTarget, DeepTokensConfig, DeepTokensConfigInput } from './lib/config/config.js'
 export { CONFIG_FILE, parseConfig } from './lib/config/config.js'
 export type { PiEvent, PiSession, PiSessionOptions, PiTransport } from './lib/pi/transport.js'
+/** The root of the git repository holding a directory; rejects with `git-failed` outside one. */
+export { repoRoot as findRepoRoot } from './lib/workspace/worktree.js'
 
 export interface OpenFleetOptions {
   /** Any directory inside the git repo the workers serve. Defaults to the process cwd. */

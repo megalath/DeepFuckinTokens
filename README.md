@@ -24,25 +24,23 @@ On a machine without a browser, pi prints the sign-in link; open it anywhere, si
 URL your browser lands on (a dead `127.0.0.1:1455` page) back into pi. pi also accepts
 `OPENAI_API_KEY` for the `openai` provider, billed to the API instead of your subscription.
 
-Then, in the git repo you want workers in, add the server:
+Then, in the git repo you want workers in, from the directory you open Claude Code in:
 
 ```bash
-claude mcp add deeptokens -- npx -y @deeptokens/mcp@latest
+npx -y @deeptokens/mcp init
 ```
 
-That registers it for you alone. To share it with everyone on the repo, commit a `.mcp.json` instead:
+`init` does two things and prints each file it wrote. Run it again and it changes nothing.
 
-```json
-{
-  "mcpServers": {
-    "deeptokens": { "type": "stdio", "command": "npx", "args": ["-y", "@deeptokens/mcp@latest"] }
-  }
-}
-```
+- Adds the `deeptokens` server to `.mcp.json`, so Claude Code starts it with
+  `npx -y @deeptokens/mcp@latest`.
+- Adds a short note to `CLAUDE.md` telling Claude to hand suitable work to the workers. Without it
+  Claude has the tools and does the work itself: in test runs it never delegated on the server's
+  own instructions, and always did with the note.
 
-Open Claude Code in that repo, approve the `deeptokens` server, and ask Claude to call `pi_models` to
+Open Claude Code there, approve the `deeptokens` server, and ask Claude to call `pi_models` to
 confirm the login. Workers run against the repo Claude Code was started in, and the server does not
-start outside a git repository.
+start outside a git repository. Commit both files to give the rest of the team the same setup.
 
 `@latest` makes `npx` ask the registry for the newest release each time the server starts, so
 restarting Claude Code is the whole update. Pin a release with `@deeptokens/mcp@0.1.0` instead.

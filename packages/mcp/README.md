@@ -4,8 +4,8 @@ MCP server that lets Claude Code delegate work to [pi](https://github.com/earend
 workers on OpenAI models, through your ChatGPT subscription.
 
 ```bash
-npx -y @deeptokens/mcp pi                             # /login openai, "Sign in with ChatGPT"
-claude mcp add deeptokens -- npx -y @deeptokens/mcp@latest   # run inside the git repo to work on
+npx -y @deeptokens/mcp pi     # /login openai, "Sign in with ChatGPT"
+npx -y @deeptokens/mcp init   # in the git repo to work on: writes .mcp.json and a CLAUDE.md note
 ```
 
 Tools, model routing and config:
