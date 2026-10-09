@@ -49,11 +49,11 @@ Claude Code was started in.
 Tell Claude in plain English ("use `fast`", "go deep on this one") or let it route. Each alias names a
 model, what it's for, and a default effort, and Claude reads all three:
 
-| Alias  | Model                        | Effort | For                                                 |
-| ------ | ---------------------------- | ------ | --------------------------------------------------- |
-| `gpt`  | `openai/gpt-6.1-sol`         | medium | default: multi-file changes, features, refactors    |
-| `fast` | `openai/gpt-5.3-codex-spark` | low    | renames, boilerplate, test scaffolding, summaries   |
-| `deep` | `openai/gpt-6.1-sol`         | xhigh  | stubborn bugs, concurrency, security, design review |
+| Alias  | Model                | Effort | For                                                 |
+| ------ | -------------------- | ------ | --------------------------------------------------- |
+| `gpt`  | `openai/gpt-6.1-sol` | medium | default: multi-file changes, features, refactors    |
+| `fast` | `openai/gpt-6-luna`  | low    | renames, boilerplate, test scaffolding, summaries   |
+| `deep` | `openai/gpt-6.1-sol` | xhigh  | stubborn bugs, concurrency, security, design review |
 
 Effort on a job beats the alias's effort, which beats `defaultThinking`. pi clamps it to what the
 model supports. Raw `provider/model-id` works too, with no defaults of its own.

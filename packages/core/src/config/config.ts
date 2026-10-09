@@ -48,7 +48,7 @@ const DEFAULT_ALIASES = {
     thinking: 'medium',
   },
   fast: {
-    model: 'openai/gpt-5.3-codex-spark',
+    model: 'openai/gpt-6-luna',
     useFor:
       'Mechanical, fully specified work: renames, boilerplate, test scaffolding, summarizing files.',
     thinking: 'low',
