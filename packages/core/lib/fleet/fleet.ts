@@ -23,7 +23,8 @@ import { isFinal, reduceJob, ZERO_USAGE } from './job.js'
  * committed to its own branch the moment the job settles.
  *
  * Lifecycle: starting → running → settled | failed | killed. Final states are
- * final; a follow-up after settling is a new job.
+ * final, with one exception: killing a settled write job discards its branch and
+ * makes it killed. A follow-up after settling is a new job.
  */
 export interface Fleet {
   /** Starts a job and returns as soon as pi has accepted the task. */
@@ -294,9 +295,12 @@ export function createFleet(deps: FleetDeps): Fleet {
     }
     await job.finalized
     // A settled write job's work lives on its branch; killing it means dropping that too.
+    // It then reads as killed: 'settled' promises a branch to review, and leaving it would
+    // have the lead try to merge one that is gone. endedAt stays the moment the work ended.
     if (job.changes !== undefined && job.worktree !== undefined) {
       await worktrees.discard(job.worktree)
       job.changes = undefined
+      job.snapshot = { ...job.snapshot, state: 'killed' }
     }
     return job.snapshot
   }

@@ -194,7 +194,7 @@ ${describeRoutes(routes)}`
     {
       title: 'Kill a pi job',
       description:
-        'Stops a job and deletes its worktree and its dt/ branch, also for a finished write job: merge the branch first if you want the work.',
+        'Stops a job and deletes its worktree and its dt/ branch, also for a finished write job, which then reports killed: merge the branch first if you want the work.',
       inputSchema: { jobId },
       annotations: { destructiveHint: true },
     },

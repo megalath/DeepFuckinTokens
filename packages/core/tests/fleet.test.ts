@@ -194,7 +194,9 @@ describe('fleet', () => {
     })
     const first = await fleet.run({ task: 'a', mode: 'write' }, 5_000)
     const second = await fleet.run({ task: 'b', mode: 'write' }, 5_000)
-    await fleet.kill(first.job.id)
+    // 'killed', not 'settled': a settled write job promises a branch, and this one has none left.
+    expect((await fleet.kill(first.job.id)).state).toBe('killed')
+    expect(fleet.status(first.job.id).endedAt).toBe(first.job.endedAt)
     await fleet.close()
     expect(await git(root, ['branch', '--list', 'dt/*'])).toBe(
       `  ${second.changes?.branch ?? ''}\n`,
