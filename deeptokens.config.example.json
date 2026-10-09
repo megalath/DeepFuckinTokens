@@ -20,7 +20,6 @@
   },
   "defaultThinking": "medium",
   "maxConcurrent": 3,
-  "worktreeDir": ".deeptokens/worktrees",
   "branchPrefix": "dt/",
   "tools": {
     "read": ["read", "grep", "find", "ls"],

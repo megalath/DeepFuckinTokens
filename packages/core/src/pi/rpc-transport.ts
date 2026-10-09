@@ -16,10 +16,11 @@ export interface RpcTransportOptions {
   readonly extraArgs?: readonly string[]
   /** How long `close()` waits for a clean exit before SIGKILL. */
   readonly closeGraceMs?: number
+  /** How long a command may go unanswered before it fails. */
+  readonly commandTimeoutMs?: number
 }
 
 const STDERR_TAIL_BYTES = 8_192
-const COMMAND_TIMEOUT_MS = 60_000
 
 export function defaultPiCliPath(): string {
   // The package's main is dist/index.js; its CLI bundle sits beside it.
@@ -35,6 +36,7 @@ export function createRpcTransport(options: RpcTransportOptions = {}): PiTranspo
       ? process.env
       : { ...process.env, PI_CODING_AGENT_DIR: options.agentDir }
   const graceMs = options.closeGraceMs ?? 5_000
+  const commandTimeoutMs = options.commandTimeoutMs ?? 60_000
 
   const start = (args: readonly string[], cwd: string, onEvent: PiEventListener): RpcChild =>
     new RpcChild(
@@ -45,6 +47,7 @@ export function createRpcTransport(options: RpcTransportOptions = {}): PiTranspo
       }),
       onEvent,
       graceMs,
+      commandTimeoutMs,
     )
 
   return {
@@ -61,7 +64,13 @@ export function createRpcTransport(options: RpcTransportOptions = {}): PiTranspo
         ...(session.thinking === undefined ? [] : ['--thinking', session.thinking]),
       ]
       const child = start(args, session.cwd, onEvent)
-      await child.ready()
+      try {
+        await child.ready()
+      } catch (error) {
+        // A pi that never came up still has a process; don't leave it running.
+        await child.close()
+        throw error
+      }
       return {
         prompt: async (text) => {
           await child.command({ type: 'prompt', message: text })
@@ -102,16 +111,23 @@ class RpcChild {
   readonly #child: ChildProcessWithoutNullStreams
   readonly #onEvent: PiEventListener
   readonly #graceMs: number
+  readonly #commandTimeoutMs: number
   readonly #pending = new Map<string, Pending>()
   readonly #exited: Promise<void>
   #nextId = 0
   #stderrTail = ''
   #exitError: Error | undefined
 
-  constructor(child: ChildProcessWithoutNullStreams, onEvent: PiEventListener, graceMs: number) {
+  constructor(
+    child: ChildProcessWithoutNullStreams,
+    onEvent: PiEventListener,
+    graceMs: number,
+    commandTimeoutMs: number,
+  ) {
     this.#child = child
     this.#onEvent = onEvent
     this.#graceMs = graceMs
+    this.#commandTimeoutMs = commandTimeoutMs
 
     const splitter = createLineSplitter((line) => {
       this.#handleLine(line)
@@ -161,7 +177,7 @@ class RpcChild {
       const timer = setTimeout(() => {
         this.#pending.delete(id)
         reject(new DeepTokensError('pi-failed', `pi did not answer ${command.type} in time`))
-      }, COMMAND_TIMEOUT_MS)
+      }, this.#commandTimeoutMs)
       this.#pending.set(id, { resolve, reject, timer })
     })
     this.#write({ ...command, id })

@@ -93,7 +93,11 @@ describe('deeptokens MCP server', () => {
       arguments: { task: 'do it', mode: 'write', timeoutSec: 20 },
     })
     expect(result.isError).not.toBe(true)
-    expect(fleet.run).toHaveBeenCalledWith({ task: 'do it', mode: 'write' }, 20_000)
+    expect(fleet.run).toHaveBeenCalledWith(
+      { task: 'do it', mode: 'write' },
+      20_000,
+      expect.any(AbortSignal),
+    )
     expect(JSON.parse(textOf(result))).toMatchObject({ text: 'done' })
   })
 

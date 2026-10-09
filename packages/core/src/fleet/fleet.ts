@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
-import { providerStatus } from '../auth/auth.js'
+import { isCheckedProvider, providerStatus } from '../auth/auth.js'
 import { resolveModel, type DeepTokensConfig } from '../config/config.js'
 import { DeepTokensError, messageOf } from '../errors.js'
 import type { PiEvent, PiSession, PiTransport } from '../pi/transport.js'
@@ -28,8 +28,8 @@ import { isFinal, reduceJob, ZERO_USAGE } from './job.js'
 export interface Fleet {
   /** Starts a job and returns as soon as pi has accepted the task. */
   spawn(spec: TaskSpec): Promise<JobSnapshot>
-  /** `spawn`, `wait`, then `collect`; kills the job if it outlives the timeout. */
-  run(spec: TaskSpec, timeoutMs: number): Promise<JobResult>
+  /** `spawn`, `wait`, then `collect`; kills the job if it outlives the timeout or `signal` aborts. */
+  run(spec: TaskSpec, timeoutMs: number, signal?: AbortSignal): Promise<JobResult>
   /** Sends a running job more instructions: now (`steer`) or once it finishes (`followUp`). */
   send(id: string, text: string, delivery: 'steer' | 'followUp'): Promise<JobSnapshot>
   /** Resolves when the job is final or the timeout passes, whichever is first. */
@@ -38,13 +38,13 @@ export interface Fleet {
   list(): readonly JobSnapshot[]
   /** The final answer and, for write jobs, the committed changes. The job must be final. */
   collect(id: string): Promise<JobResult>
-  /** Stops a job and throws away its worktree and branch. */
+  /** Stops a job and throws away its worktree and branch, a finished job's branch included. */
   kill(id: string): Promise<JobSnapshot>
   /** The configured aliases, without asking pi anything. */
   routes(): readonly ModelRoute[]
   /** The routes checked against pi: which resolve, and whether pi is logged in. */
   models(): Promise<ModelReport>
-  /** Kills every live job. The fleet refuses new work afterwards. */
+  /** Kills every live job; finished jobs keep their branches. The fleet refuses new work afterwards. */
   close(): Promise<void>
 }
 
@@ -81,6 +81,11 @@ export function createFleet(deps: FleetDeps): Fleet {
   const newId = deps.newId ?? (() => `j${randomBytes(4).toString('hex')}`)
   const jobs = new Map<JobId, Job>()
   let isClosed = false
+  // Read through a function: TypeScript would otherwise narrow it across awaits.
+  const closed = (): boolean => isClosed
+  /** Slots taken by spawns that have not registered their job yet. */
+  let reserved = 0
+  const spawning = new Set<Promise<unknown>>()
 
   const find = (id: string): Job => {
     const job = jobs.get(id as JobId)
@@ -88,7 +93,8 @@ export function createFleet(deps: FleetDeps): Fleet {
     return job
   }
 
-  const live = (): number => [...jobs.values()].filter((job) => !isFinal(job.snapshot)).length
+  const live = (): number =>
+    reserved + [...jobs.values()].filter((job) => !isFinal(job.snapshot)).length
 
   /** Runs once per job, when it first turns final: stop pi, then keep or drop its work. */
   const finalize = async (job: Job): Promise<void> => {
@@ -132,6 +138,13 @@ export function createFleet(deps: FleetDeps): Fleet {
     Object.entries(config.aliases).map(([alias, route]) => ({ alias, ...route }))
 
   const spawn = async (spec: TaskSpec): Promise<JobSnapshot> => {
+    const started = startJob(spec)
+    spawning.add(started)
+    void started.catch(() => undefined).finally(() => spawning.delete(started))
+    return started
+  }
+
+  const startJob = async (spec: TaskSpec): Promise<JobSnapshot> => {
     if (isClosed) throw new DeepTokensError('fleet-closed', 'The fleet is shut down.')
     if (live() >= config.maxConcurrent) {
       throw new DeepTokensError(
@@ -148,17 +161,27 @@ export function createFleet(deps: FleetDeps): Fleet {
       )
     }
     const model = route.target
-    const [auth] = await providerStatus(deps.agentDir, [model.provider])
-    if (auth !== undefined && !auth.isLoggedIn) {
-      throw new DeepTokensError(
-        'not-logged-in',
-        `pi has no credentials for ${model.provider}. ${auth.loginHint ?? ''}`,
-      )
+
+    // Take the slot before the first await, so parallel spawns can't all pass the check.
+    reserved += 1
+    try {
+      if (isCheckedProvider(model.provider)) {
+        const [auth] = await providerStatus(deps.agentDir, [model.provider])
+        if (auth !== undefined && !auth.isLoggedIn) {
+          throw new DeepTokensError(
+            'not-logged-in',
+            `pi has no credentials for ${model.provider}. ${auth.loginHint ?? ''}`,
+          )
+        }
+      }
+      if (closed()) throw new DeepTokensError('fleet-closed', 'The fleet is shut down.')
+    } finally {
+      reserved -= 1
     }
 
     const id = newId() as JobId
     const mode = spec.mode ?? 'read'
-    const worktree = mode === 'write' ? await worktrees.create(id) : undefined
+    const worktree = mode === 'write' ? worktrees.plan(id) : undefined
     const workspace: Workspace =
       worktree === undefined
         ? { kind: 'shared', path: deps.root }
@@ -183,9 +206,18 @@ export function createFleet(deps: FleetDeps): Fleet {
       finalized: undefined,
       waiters: new Set(),
     }
+    // Registered synchronously with the slot release above: kill and close see it from here.
     jobs.set(id, job)
 
     try {
+      if (worktree !== undefined) {
+        await worktrees.create(worktree)
+        if (isFinal(job.snapshot)) {
+          // Killed while git ran: finalize may have cleaned up before the worktree existed.
+          await worktrees.discard(worktree)
+          return job.snapshot
+        }
+      }
       const session = await transport.open(
         {
           cwd: workspace.path,
@@ -203,7 +235,9 @@ export function createFleet(deps: FleetDeps): Fleet {
       job.session = session
       await session.prompt(WORKER_BRIEF + spec.task)
     } catch (error) {
+      const wasFinal = isFinal(job.snapshot)
       fail(job, error)
+      if (wasFinal && worktree !== undefined) await worktrees.discard(worktree)
     }
     return job.snapshot
   }
@@ -211,7 +245,15 @@ export function createFleet(deps: FleetDeps): Fleet {
   const wait = async (id: string, timeoutMs: number): Promise<JobSnapshot> => {
     const job = find(id)
     if (job.finalized !== undefined) {
-      await job.finalized
+      // Final already; cleanup may still be running (a kill's grace period). Honor the timeout.
+      let timer: NodeJS.Timeout | undefined
+      await Promise.race([
+        job.finalized,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs)
+        }),
+      ])
+      clearTimeout(timer)
       return job.snapshot
     }
     await new Promise<void>((resolve) => {
@@ -247,6 +289,11 @@ export function createFleet(deps: FleetDeps): Fleet {
       transition(job, { ...job.snapshot, state: 'killed', endedAt: now() })
     }
     await job.finalized
+    // A settled write job's work lives on its branch; killing it means dropping that too.
+    if (job.changes !== undefined && job.worktree !== undefined) {
+      await worktrees.discard(job.worktree)
+      job.changes = undefined
+    }
     return job.snapshot
   }
 
@@ -256,10 +303,18 @@ export function createFleet(deps: FleetDeps): Fleet {
     collect,
     kill,
 
-    async run(spec, timeoutMs) {
+    async run(spec, timeoutMs, signal) {
       const started = await spawn(spec)
-      const settled = await wait(started.id, timeoutMs)
-      if (!isFinal(settled)) await kill(started.id)
+      // The caller gave up (Esc in the host): it never saw the id, so nobody else will kill it.
+      const onAbort = (): void => void kill(started.id)
+      signal?.addEventListener('abort', onAbort, { once: true })
+      try {
+        if (signal?.aborted === true) await kill(started.id)
+        const settled = await wait(started.id, timeoutMs)
+        if (!isFinal(settled)) await kill(started.id)
+      } finally {
+        signal?.removeEventListener('abort', onAbort)
+      }
       return collect(started.id)
     },
 
@@ -305,7 +360,17 @@ export function createFleet(deps: FleetDeps): Fleet {
 
     async close() {
       isClosed = true
-      await Promise.all([...jobs.keys()].map(kill))
+      // Stop what is registered (keeping finished jobs' branches), then let in-flight spawns
+      // notice and clean up after themselves.
+      await Promise.all(
+        [...jobs.values()].map(async (job) => {
+          if (job.finalized === undefined) {
+            transition(job, { ...job.snapshot, state: 'killed', endedAt: now() })
+          }
+          await job.finalized
+        }),
+      )
+      await Promise.allSettled([...spawning])
     },
   }
 }

@@ -16,6 +16,14 @@ const ENV_KEYS: Readonly<Record<string, readonly string[]>> = {
   openai: ['OPENAI_API_KEY'],
 }
 
+/**
+ * Providers whose credentials we know how to recognise. Anything else (other
+ * env keys, models.json providers, local servers) is left to pi to accept or refuse.
+ */
+export function isCheckedProvider(provider: string): boolean {
+  return provider in LOGIN_HINTS
+}
+
 export function defaultAgentDir(): string {
   return process.env['PI_CODING_AGENT_DIR'] ?? join(homedir(), '.pi', 'agent')
 }

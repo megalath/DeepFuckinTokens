@@ -6,25 +6,35 @@ import { describe, expect, it, vi } from 'vitest'
 import { parseConfig, type DeepTokensConfigInput } from '../src/config/config.js'
 import { createFleet } from '../src/fleet/fleet.js'
 import { git } from '../src/workspace/git.js'
-import { createWorktrees } from '../src/workspace/worktree.js'
+import { createWorktrees, gitCommonDir, type Worktrees } from '../src/workspace/worktree.js'
 import { fakeTransport, reply, type Script } from './helpers/fake-transport.js'
 import { tmpRepo } from './helpers/repo.js'
 
-async function setup(script: Script, config: DeepTokensConfigInput = {}) {
+async function setup(
+  script: Script,
+  config: DeepTokensConfigInput = {},
+  wrap: (worktrees: Worktrees) => Worktrees = (worktrees) => worktrees,
+) {
   const { root, agentDir } = await tmpRepo()
   const parsed = parseConfig(config)
   const transport = fakeTransport(script)
+  const base = join(await gitCommonDir(root), 'deeptokens', 'worktrees')
   let ids = 0
   const fleet = createFleet({
     root,
     agentDir,
     config: parsed,
     transport,
-    worktrees: createWorktrees(root, parsed.worktreeDir, parsed.branchPrefix),
+    worktrees: wrap(createWorktrees(root, base, parsed.branchPrefix)),
     newId: () => `j${String(++ids)}`,
   })
   return { fleet, transport, root, agentDir }
 }
+
+const tick = async (): Promise<void> =>
+  new Promise((resolve) => {
+    setImmediate(resolve)
+  })
 
 const answers =
   (text: string): Script =>
@@ -170,6 +180,96 @@ describe('fleet', () => {
     await fleet.run({ task: 'b' }, 5_000)
     await fleet.run({ task: 'c', model: 'bare' }, 5_000)
     expect(transport.opened.map((options) => options.thinking)).toEqual(['off', 'high', 'minimal'])
+  })
+
+  it('keeps a running write job out of the main tree: git status stays clean', async () => {
+    const { fleet, root } = await setup(hangs)
+    const job = await fleet.spawn({ task: 'x', mode: 'write' })
+    expect(job.workspace.path).toContain(join('.git', 'deeptokens', 'worktrees'))
+    expect(await git(root, ['status', '--porcelain'])).toBe('')
+    await git(root, ['add', '-A'])
+    expect(await git(root, ['diff', '--cached', '--name-only'])).toBe('')
+    await fleet.close()
+  })
+
+  it('holds maxConcurrent for spawns made in parallel', async () => {
+    const { fleet } = await setup(hangs, { maxConcurrent: 2 })
+    const results = await Promise.allSettled(
+      Array.from({ length: 6 }, async (_, i) => fleet.spawn({ task: String(i), mode: 'write' })),
+    )
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(2)
+    for (const result of results.filter((r) => r.status === 'rejected')) {
+      expect(result.reason).toMatchObject({ code: 'fleet-full' })
+    }
+    await fleet.close()
+  })
+
+  it('leaves no branch or worktree when closed mid-spawn', async () => {
+    let release = (): void => undefined
+    const { fleet, root } = await setup(hangs, {}, (worktrees) => ({
+      ...worktrees,
+      create: async (worktree) => {
+        await new Promise<void>((resolve) => {
+          release = resolve
+        })
+        return worktrees.create(worktree)
+      },
+    }))
+    const spawning = fleet.spawn({ task: 'x', mode: 'write' })
+    while (fleet.list().length === 0) await tick()
+    const closing = fleet.close()
+    release()
+    await closing
+    expect((await spawning).state).toBe('killed')
+    expect(await git(root, ['branch', '--list', 'dt/*'])).toBe('')
+    expect(await git(root, ['worktree', 'list'])).not.toContain('j1')
+  })
+
+  it('kill on a finished write job deletes its branch; close keeps finished branches', async () => {
+    const { fleet, root } = await setup(async ({ options, emit }) => {
+      await writeFile(join(options.cwd, 'NEW.md'), 'x\n')
+      for (const event of reply('done')) emit(event)
+    })
+    const first = await fleet.run({ task: 'a', mode: 'write' }, 5_000)
+    const second = await fleet.run({ task: 'b', mode: 'write' }, 5_000)
+    await fleet.kill(first.job.id)
+    await fleet.close()
+    expect(await git(root, ['branch', '--list', 'dt/*'])).toBe(
+      `  ${second.changes?.branch ?? ''}\n`,
+    )
+    expect((await fleet.collect(first.job.id)).changes).toBeUndefined()
+  })
+
+  it('kills a run whose caller aborted', async () => {
+    const { fleet } = await setup(hangs)
+    const controller = new AbortController()
+    const running = fleet.run({ task: 'x' }, 60_000, controller.signal)
+    while (fleet.list().length === 0) await tick()
+    controller.abort()
+    expect((await running).job.state).toBe('killed')
+  })
+
+  it('honors the wait timeout while a kill is still cleaning up', async () => {
+    const { fleet } = await setup(hangs, {}, (worktrees) => ({
+      ...worktrees,
+      discard: async (worktree) => {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        return worktrees.discard(worktree)
+      },
+    }))
+    const job = await fleet.spawn({ task: 'x', mode: 'write' })
+    const killing = fleet.kill(job.id)
+    const started = Date.now()
+    await fleet.wait(job.id, 20)
+    expect(Date.now() - started).toBeLessThan(300)
+    await killing
+  })
+
+  it('leaves providers it cannot check to pi', async () => {
+    const { fleet, transport } = await setup(answers('ok'))
+    const result = await fleet.run({ task: 'x', model: 'anthropic/claude-x' }, 5_000)
+    expect(result.job.state).toBe('settled')
+    expect(transport.opened[0]?.model).toEqual({ provider: 'anthropic', id: 'claude-x' })
   })
 
   it('rejects unknown job ids', async () => {

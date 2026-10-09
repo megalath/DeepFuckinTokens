@@ -67,7 +67,8 @@ export const configSchema = z
     aliases: z.record(z.string().regex(/^[a-z][a-z0-9-]*$/), aliasTarget).prefault(DEFAULT_ALIASES),
     defaultThinking: z.enum(THINKING_LEVELS).default('medium'),
     maxConcurrent: z.number().int().min(1).max(32).default(3),
-    worktreeDir: z.string().min(1).default('.deeptokens/worktrees'),
+    /** Where write jobs' worktrees go, relative to the repo root. Default: inside .git. */
+    worktreeDir: z.string().min(1).optional(),
     branchPrefix: z.string().min(1).default('dt/'),
     /** pi's agent dir; defaults to PI_CODING_AGENT_DIR, then ~/.pi/agent. */
     agentDir: z.string().min(1).optional(),

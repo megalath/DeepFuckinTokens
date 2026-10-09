@@ -1,5 +1,5 @@
 // A stand-in for `pi --mode rpc`: speaks enough of the protocol to exercise the transport.
-// Behaviour comes from FAKE_PI_MODE: "normal" (default), "dialog", "crash-on-prompt".
+// Behaviour comes from FAKE_PI_MODE: "normal" (default), "dialog", "crash-on-prompt", "mute".
 const mode = process.env.FAKE_PI_MODE ?? 'normal'
 const out = (record) => process.stdout.write(`${JSON.stringify(record)}\n`)
 const usage = {
@@ -26,6 +26,7 @@ process.stdin.on('data', (chunk) => {
 process.stdin.on('end', () => process.exit(0))
 
 function handle(command) {
+  if (mode === 'mute') return
   const respond = (data) =>
     out({ type: 'response', id: command.id, command: command.type, success: true, data })
   switch (command.type) {

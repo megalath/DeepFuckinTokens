@@ -9,7 +9,7 @@ const fakePi = fileURLToPath(new URL('./fixtures/fake-pi.mjs', import.meta.url))
 
 function transportIn(mode: string) {
   process.env['FAKE_PI_MODE'] = mode
-  return createRpcTransport({ cliPath: fakePi, closeGraceMs: 1_000 })
+  return createRpcTransport({ cliPath: fakePi, closeGraceMs: 1_000, commandTimeoutMs: 300 })
 }
 
 async function untilEvent(events: PiEvent[], type: PiEvent['type']): Promise<PiEvent> {
@@ -66,6 +66,14 @@ describe('rpc transport against a fake pi', () => {
       stderrTail: expect.stringContaining('out of tokens') as unknown,
     })
     await expect(pi.steer('more')).rejects.toMatchObject({ code: 'pi-failed' })
+  })
+
+  it('closes a pi that never finishes booting', async () => {
+    const events: PiEvent[] = []
+    await expect(
+      transportIn('mute').open({ ...session, tools: ['read'] }, (event) => events.push(event)),
+    ).rejects.toMatchObject({ code: 'pi-failed' })
+    expect(events.map((event) => event.type)).toContain('exited')
   })
 
   it('lists models through a short-lived process', async () => {

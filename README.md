@@ -3,8 +3,14 @@
 Claude Code as the master harness, [pi](https://github.com/earendil-works/pi) as the worker harness,
 OpenAI models through your ChatGPT subscription (pi's Sign in with ChatGPT) doing the delegated grunt work.
 
-Claude plans, briefs, reviews and merges. pi workers read, edit and report. Write jobs land on their
-own git branch, so nothing touches your tree until Claude (or you) merges it.
+Claude plans, briefs, reviews and merges. pi workers read, edit and report. Write jobs run in their
+own git worktree (kept inside `.git/`, so `git status` never sees it) and land on their own
+`dt/<job>` branch for Claude or you to merge.
+
+**Isolation, not a sandbox (yet).** A worktree keeps a worker's normal edits off your checkout, but
+pi's file tools accept any path, so a worker that writes `../../file` or an absolute path on
+purpose can reach outside it. That's why write jobs get no `bash` by default. The real fence is the
+pi guard extension (PLAN.md, M3): a path jail on every file tool.
 
 ## Setup
 
@@ -27,16 +33,16 @@ Claude Code was started in.
 
 ## Tools Claude gets
 
-| Tool         | Does                                                                    |
-| ------------ | ----------------------------------------------------------------------- |
-| `pi_run`     | One task, wait for the answer (killed past `timeoutSec`)                |
-| `pi_spawn`   | Start a task in the background, get a job id                            |
-| `pi_wait`    | Block until a job is final or the timeout passes                        |
-| `pi_send`    | Steer a running job, or queue a follow-up                               |
-| `pi_status`  | One job, or all of them                                                 |
-| `pi_collect` | Final answer, usage, and for write jobs the branch, commit, stat, patch |
-| `pi_kill`    | Stop a job, delete its worktree and branch                              |
-| `pi_models`  | Aliases, what they resolve to, login state with the fix                 |
+| Tool         | Does                                                                     |
+| ------------ | ------------------------------------------------------------------------ |
+| `pi_run`     | One task, wait for the answer (killed past `timeoutSec`)                 |
+| `pi_spawn`   | Start a task in the background, get a job id                             |
+| `pi_wait`    | Block until a job is final or the timeout passes                         |
+| `pi_send`    | Steer a running job, or queue a follow-up                                |
+| `pi_status`  | One job, or all of them                                                  |
+| `pi_collect` | Final answer, usage, and for write jobs the branch, commit, stat, patch  |
+| `pi_kill`    | Stop a job, delete its worktree and branch (a finished job's branch too) |
+| `pi_models`  | Aliases, what they resolve to, login state with the fix                  |
 
 ## Picking models and effort
 
@@ -58,5 +64,10 @@ Optional `deeptokens.config.json` at the repo root; see `deeptokens.config.examp
 either `{ "model", "useFor", "thinking" }` or a bare `"provider/model-id"`. Restart the MCP server
 after editing it: Claude reads the routes when the server starts.
 
-Write jobs get no `bash` by default: pi has no permission prompts, and a worktree fences file
-edits, not shell commands. Add `"bash"` to `tools.write` once you accept that.
+Write jobs get no `bash` by default: pi has no permission prompts, and a worktree is not a sandbox
+(see above). Add `"bash"` to `tools.write` once you accept that.
+
+**A repo's config is code you run.** `piCliPath` names the script started for every worker,
+`agentDir` picks the credentials, and `tools.write` can enable `bash`. Before pointing the server at
+someone else's repo, read its `deeptokens.config.json`. Relative paths in it resolve from the repo
+root.

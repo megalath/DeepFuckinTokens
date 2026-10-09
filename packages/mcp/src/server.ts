@@ -117,14 +117,14 @@ ${describeRoutes(routes)}`
     {
       title: 'Run a pi worker and wait',
       description:
-        'Runs one task on a pi worker and waits for its answer (killed if it outlives timeoutSec). Best for jobs under ~5 minutes. Write jobs return the commit, diffstat and patch.',
+        'Runs one task on a pi worker and waits for its answer (killed if it outlives timeoutSec or the call is cancelled). Best for jobs under ~5 minutes. Write jobs return the commit, diffstat and patch.',
       inputSchema: {
         ...shape,
         timeoutSec: z.number().int().min(10).max(600).default(300),
       },
     },
-    async ({ timeoutSec, ...spec }) =>
-      answer(async () => fleet.run(toSpec(spec), seconds(timeoutSec))),
+    async ({ timeoutSec, ...spec }, { signal }) =>
+      answer(async () => fleet.run(toSpec(spec), seconds(timeoutSec), signal)),
   )
 
   server.registerTool(
@@ -193,7 +193,8 @@ ${describeRoutes(routes)}`
     'pi_kill',
     {
       title: 'Kill a pi job',
-      description: 'Stops a job and deletes its worktree and branch.',
+      description:
+        'Stops a job and deletes its worktree and its dt/ branch, also for a finished write job: merge the branch first if you want the work.',
       inputSchema: { jobId },
       annotations: { destructiveHint: true },
     },
