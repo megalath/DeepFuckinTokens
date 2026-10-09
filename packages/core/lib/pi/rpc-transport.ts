@@ -28,6 +28,21 @@ export function defaultPiCliPath(): string {
   return fileURLToPath(new URL('./bundle/cli.js', main))
 }
 
+/**
+ * Every pi we start is a bare worker: nothing from the user's own pi setup comes along. Without
+ * these flags pi loads the global extensions and the whole skills catalog into each worker, which
+ * runs code the lead never asked for and adds about 11k input tokens to every model call.
+ * AGENTS.md and CLAUDE.md stay on: a worker editing a repo should follow that repo's rules.
+ */
+const BARE_WORKER_ARGS = [
+  '--no-session',
+  '--no-mcp',
+  '--no-extensions',
+  '--no-skills',
+  '--no-prompt-templates',
+  '--no-themes',
+] as const
+
 /** Drives pi over its RPC protocol, one child process per session. */
 export function createRpcTransport(options: RpcTransportOptions = {}): PiTransport {
   const cliPath = options.cliPath ?? defaultPiCliPath()
@@ -53,8 +68,7 @@ export function createRpcTransport(options: RpcTransportOptions = {}): PiTranspo
   return {
     async open(session: PiSessionOptions, onEvent: PiEventListener): Promise<PiSession> {
       const args = [
-        '--no-session',
-        '--no-mcp',
+        ...BARE_WORKER_ARGS,
         '--provider',
         session.model.provider,
         '--model',
@@ -89,7 +103,7 @@ export function createRpcTransport(options: RpcTransportOptions = {}): PiTranspo
     },
 
     async listModels(): Promise<readonly ModelRef[]> {
-      const child = start(['--no-session', '--no-mcp'], process.cwd(), () => undefined)
+      const child = start(BARE_WORKER_ARGS, process.cwd(), () => undefined)
       try {
         await child.ready()
         return parseModels(await child.command({ type: 'get_available_models' }))

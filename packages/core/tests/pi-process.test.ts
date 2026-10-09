@@ -31,7 +31,7 @@ describe('a worker that is a real pi process', () => {
     expect(job.state).toBe('failed')
     expect(job.error).toContain('out of tokens')
     expect(job.error).toContain(
-      '--mode rpc --no-session --no-mcp --provider openai --model gpt-6-luna --tools read,grep,find,ls --thinking high',
+      '--mode rpc --no-session --no-mcp --no-extensions --no-skills --no-prompt-templates --no-themes --provider openai --model gpt-6-luna --tools read,grep,find,ls --thinking high',
     )
     // A stdout line that is not JSON is kept for the crash report, not thrown.
     expect(job.error).toContain('[non-JSON stdout]')

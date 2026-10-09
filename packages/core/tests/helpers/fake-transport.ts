@@ -31,6 +31,8 @@ export interface FakeTransportOptions {
   readonly models?: readonly ModelRef[]
   /** How long `close()` takes, to hold a job in its cleanup. */
   readonly closeDelayMs?: number
+  /** Runs while the prompt is in flight; a rejection is pi refusing or dying on it. */
+  readonly onPrompt?: () => Promise<void>
 }
 
 export interface FakeTransport extends PiTransport {
@@ -75,8 +77,8 @@ export function fakeTransport(script: Script, options: FakeTransportOptions = {}
       }
       return Promise.resolve({
         async prompt(task) {
+          await options.onPrompt?.()
           setImmediate(() => void script({ options: session, task, emit, emitLate: onEvent }))
-          return Promise.resolve()
         },
         async steer(text) {
           sent.push({ delivery: 'steer', text })

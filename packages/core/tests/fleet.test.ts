@@ -211,6 +211,33 @@ describe('fleet', () => {
     expect((await running).job.state).toBe('killed')
   })
 
+  it('keeps a job killed when its prompt then fails, as it does once pi is stopped', async () => {
+    let failPrompt = (): void => undefined
+    const { fleet, transport } = await setup(
+      hangs,
+      {},
+      {
+        onPrompt: async () =>
+          new Promise<void>((_, reject) => {
+            failPrompt = () => {
+              reject(new Error('pi exited (code null, signal SIGTERM)'))
+            }
+          }),
+      },
+    )
+    const spawning = fleet.spawn({ task: 'x' })
+    while (transport.opened.length === 0) await tick()
+    await tick()
+    const [job] = fleet.list()
+    const killing = fleet.kill(job?.id ?? '')
+    failPrompt()
+    await killing
+
+    const settled = await spawning
+    expect(settled.state).toBe('killed')
+    expect(settled.error).toBeUndefined()
+  })
+
   it('honors the wait timeout while a kill is still cleaning up', async () => {
     const { fleet } = await setup(hangs, {}, { closeDelayMs: 500 })
     const job = await fleet.spawn({ task: 'x', mode: 'write' })

@@ -68,6 +68,13 @@ ChatGPT login on 2026-10-08. They carry no effort of their own, so `defaultThink
 Effort on a job beats the alias's effort, which beats `defaultThinking`. pi clamps it to what the
 model supports. Raw `provider/model-id` works too, with no defaults of its own.
 
+## What a worker sees
+
+Workers start bare: none of your own pi extensions, skills, prompt templates or MCP servers load into
+them. A worker gets the tools listed in `tools`, the repo's `AGENTS.md`/`CLAUDE.md`, and Claude's
+brief. `usage.costUsd` on a job is pi's estimate at API list prices; a ChatGPT login is not billed
+per call.
+
 ## Config
 
 Optional `deeptokens.config.json` at the repo root; see `deeptokens.config.example.json`. An alias is

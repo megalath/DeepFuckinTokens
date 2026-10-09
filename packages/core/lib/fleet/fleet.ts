@@ -131,6 +131,10 @@ export function createFleet(deps: FleetDeps): Fleet {
   }
 
   const fail = (job: Job, error: unknown): void => {
+    // Stopping pi makes its in-flight prompt reject; that must not turn a killed (or settled)
+    // job into a failed one. An already failed job does take the error: pi's exit is reported
+    // first, and what the caller threw says why (a boot timeout, the exit code).
+    if (job.snapshot.state === 'killed' || job.snapshot.state === 'settled') return
     transition(job, { ...job.snapshot, state: 'failed', endedAt: now(), error: messageOf(error) })
   }
 
