@@ -1,9 +1,18 @@
 {
   "name": "@deeptokens/core",
   "version": "0.1.0",
-  "private": true,
   "description": "Fleet of pi workers driven by a master harness: spawn, steer, wait, collect, kill.",
+  "license": "0BSD",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/megalath/DeepFuckinTokens.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/megalath/DeepFuckinTokens#readme",
   "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
   "exports": {
     ".": {
       "@deeptokens/source": "./index.ts",
@@ -12,10 +21,14 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/.tsbuildinfo"
   ],
   "dependencies": {
     "@earendil-works/pi-coding-agent": "1.1.0",
     "zod": "4.6.5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

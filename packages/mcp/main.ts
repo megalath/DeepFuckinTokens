@@ -1,11 +1,56 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
-import { openFleet, type Fleet } from '@deeptokens/core'
+import { openFleet, runPi, type Fleet } from '@deeptokens/core'
 
+import { initRepo } from './init.js'
 import { createServer } from './server.js'
 
 const VERSION = '0.1.0'
+
+const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
+
+// No arguments is the MCP server, which is how a host starts us. `pi` and `init` are what a person
+// runs by hand: an npm install has no `pnpm pi`, workers cannot log themselves in, and a server
+// the repo's CLAUDE.md does not mention goes unused (see init.ts).
+const [command, ...rest] = process.argv.slice(2)
+if (command === 'pi') {
+  try {
+    process.exit(await runPi(rest))
+  } catch (error) {
+    console.error(`deeptokens: cannot run pi: ${reason(error)}`)
+    process.exit(1)
+  }
+}
+if (command === 'init') {
+  try {
+    const report = await initRepo(process.cwd())
+    for (const { path, outcome } of [report.mcpConfig, report.claudeMd]) {
+      console.log(`${outcome === 'added' ? 'wrote  ' : 'kept   '} ${path}`)
+    }
+    console.log(
+      'Next: run `npx -y @deeptokens/mcp pi` and `/login openai` if you have not yet, ' +
+        'then open Claude Code here and approve the deeptokens server.',
+    )
+    process.exit(0)
+  } catch (error) {
+    console.error(
+      `deeptokens: cannot set up: ${reason(error)}\n` +
+        'Run init in the directory you open Claude Code in, inside a git repository.',
+    )
+    process.exit(1)
+  }
+}
+if (command !== undefined) {
+  // A typo must not start a server that then sits waiting on a terminal for MCP input.
+  console.error(
+    `deeptokens: unknown command "${command}"\n` +
+      'Usage: deeptokens-mcp        start the MCP server on stdio (what Claude Code runs)\n' +
+      '       deeptokens-mcp init   set this repo up: .mcp.json and a CLAUDE.md note\n' +
+      '       deeptokens-mcp pi     open pi, to /login openai',
+  )
+  process.exit(2)
+}
 
 let fleet: Fleet
 try {
@@ -13,7 +58,7 @@ try {
 } catch (error) {
   // The host only shows "failed to connect"; stderr is where the reason lands.
   console.error(
-    `deeptokens: cannot start: ${error instanceof Error ? error.message : String(error)}\n` +
+    `deeptokens: cannot start: ${reason(error)}\n` +
       'Run the server from inside a git repository, and check deeptokens.config.json if it has one.',
   )
   process.exit(1)

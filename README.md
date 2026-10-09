@@ -14,22 +14,51 @@ pi guard extension (PLAN.md, M3): a path jail on every file tool.
 
 ## Setup
 
+Needs Node 22.13 or newer, git, Claude Code, and a ChatGPT subscription.
+
 ```bash
-pnpm install
-pnpm build
-pnpm pi            # pi's TUI: /login openai, choose "Sign in with ChatGPT", finish in the browser
+npx -y @deeptokens/mcp pi    # pi's TUI: /login openai, choose "Sign in with ChatGPT", finish in the browser
 ```
 
 On a machine without a browser, pi prints the sign-in link; open it anywhere, sign in, and paste the
 URL your browser lands on (a dead `127.0.0.1:1455` page) back into pi. pi also accepts
 `OPENAI_API_KEY` for the `openai` provider, billed to the API instead of your subscription.
 
-Then open Claude Code in this repo and approve the `deeptokens` MCP server from `.mcp.json`.
-Ask Claude to call `pi_models` to confirm the login.
+Then, in the git repo you want workers in, from the directory you open Claude Code in:
 
-Use it from another repo by pointing that repo's `.mcp.json` at this build:
-`"args": ["/abs/path/to/DeepFuckinTokens/packages/mcp/dist/main.js"]`. Workers run against the repo
-Claude Code was started in.
+```bash
+npx -y @deeptokens/mcp init
+```
+
+`init` does two things and prints each file it wrote. Run it again and it changes nothing.
+
+- Adds the `deeptokens` server to `.mcp.json`, so Claude Code starts it with
+  `npx -y @deeptokens/mcp@latest`.
+- Adds a short note to `CLAUDE.md` telling Claude to hand suitable work to the workers. Without it
+  Claude has the tools and does the work itself: in test runs it never delegated on the server's
+  own instructions, and always did with the note.
+
+Open Claude Code there, approve the `deeptokens` server, and ask Claude to call `pi_models` to
+confirm the login. Workers run against the repo Claude Code was started in, and the server does not
+start outside a git repository. Commit both files to give the rest of the team the same setup.
+
+`@latest` makes `npx` ask the registry for the newest release each time the server starts, so
+restarting Claude Code is the whole update. Pin a release with `@deeptokens/mcp@0.1.0` instead.
+
+### From source
+
+```bash
+pnpm install
+pnpm build
+pnpm pi            # the same pi TUI, for /login openai
+```
+
+Open Claude Code in this repo and approve the `deeptokens` server from `.mcp.json`, which runs the
+local build. To use that build from another repo, point its `.mcp.json` at it:
+`"command": "node", "args": ["/abs/path/to/DeepFuckinTokens/packages/mcp/dist/main.js"]`.
+
+`pnpm release` publishes `@deeptokens/core` and `@deeptokens/mcp` to npm after a clean build and
+`pnpm check`. Bump both versions first; pnpm skips a version that is already published.
 
 ## Tools Claude gets
 
@@ -88,3 +117,7 @@ Write jobs get no `bash` by default: pi has no permission prompts, and a worktre
 `agentDir` picks the credentials, and `tools.write` can enable `bash`. Before pointing the server at
 someone else's repo, read its `deeptokens.config.json`. Relative paths in it resolve from the repo
 root.
+
+## License
+
+[0BSD](./LICENSE): use it for anything, no conditions, no attribution required.

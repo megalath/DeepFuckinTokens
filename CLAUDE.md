@@ -11,6 +11,7 @@ The `deeptokens` MCP server (`.mcp.json`) gives you `pi_run`, `pi_spawn`, `pi_wa
 - `pnpm lint:boundaries`: dependency-cruiser; fails on an import into another package's subfolder.
 - `pnpm test:live`: real pi; the paid call skips unless logged in
 - `pnpm pi`: pi's own TUI, for `/login openai`
+- `pnpm release`: clean build, `pnpm check`, then publish `core` and `mcp` to npm
 
 ## Layout
 
@@ -22,7 +23,8 @@ Packages are deep modules: see [packages/README.md](./packages/README.md) before
   - `lib/pi/` is the only code that knows pi's wire protocol. `transport.ts` is the port,
     `rpc-transport.ts` the adapter, `wire.ts` the zod-validated projection.
   - `lib/workspace/` git worktrees for write jobs.
-- `packages/mcp`: thin MCP face over a `Fleet`. No logic lives here.
+- `packages/mcp`: thin MCP face over a `Fleet`. No fleet logic lives here. `init.ts` writes the
+  host's files (`.mcp.json`, the `CLAUDE.md` note) for the `init` subcommand.
 - `packages/example`: copy-me template for a new package.
 
 ## Rules
