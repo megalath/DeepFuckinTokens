@@ -8,21 +8,48 @@ import { CONFIG_FILE, loadConfig, parseConfig, resolveModel } from '../src/confi
 import { DeepTokensError } from '../src/errors.js'
 
 describe('config', () => {
-  it('defaults to the Codex subscription', () => {
+  it('defaults to Codex routes that each say what they are for', () => {
     const config = parseConfig({})
     expect(config.defaultModel).toBe('gpt')
-    expect(resolveModel(config, 'gpt')?.provider).toBe('openai-codex')
+    expect(Object.keys(config.aliases)).toEqual(['gpt', 'fast', 'deep'])
+    for (const route of Object.values(config.aliases)) {
+      expect(route.target.provider).toBe('openai-codex')
+      expect(route.useFor).toBeTruthy()
+      expect(route.thinking).toBeDefined()
+    }
     expect(config.tools.write).not.toContain('bash')
   })
 
-  it('resolves aliases and raw provider/model ids', () => {
-    const config = parseConfig({ aliases: { big: 'openai-codex/gpt-6-sol' }, defaultModel: 'big' })
-    expect(resolveModel(config, 'big')).toEqual({ provider: 'openai-codex', id: 'gpt-6-sol' })
-    expect(resolveModel(config, 'openai-codex/gpt-5.5')).toEqual({
-      provider: 'openai-codex',
-      id: 'gpt-5.5',
+  it('takes full alias objects and bare provider/model-id shorthand', () => {
+    const config = parseConfig({
+      defaultModel: 'big',
+      aliases: {
+        big: { model: 'openai-codex/gpt-6-sol', useFor: 'big jobs', thinking: 'high' },
+        plain: 'openai-codex/gpt-5.5',
+      },
+    })
+    expect(resolveModel(config, 'big')).toEqual({
+      target: { provider: 'openai-codex', id: 'gpt-6-sol' },
+      useFor: 'big jobs',
+      thinking: 'high',
+    })
+    expect(resolveModel(config, 'plain')).toEqual({
+      target: { provider: 'openai-codex', id: 'gpt-5.5' },
+    })
+    expect(resolveModel(config, 'openai-codex/gpt-6-luna')).toEqual({
+      target: { provider: 'openai-codex', id: 'gpt-6-luna' },
     })
     expect(resolveModel(config, 'nope')).toBeUndefined()
+  })
+
+  it('rejects a malformed alias', () => {
+    expect(() => parseConfig({ aliases: { x: { model: 'no-slash' } } })).toThrow(DeepTokensError)
+    expect(() => parseConfig({ aliases: { x: { model: 'a/b', thinking: 'ludicrous' } } })).toThrow(
+      DeepTokensError,
+    )
+    expect(() => parseConfig({ aliases: { x: { model: 'a/b', extra: 1 } } })).toThrow(
+      DeepTokensError,
+    )
   })
 
   it('rejects unknown keys and a dangling default', () => {

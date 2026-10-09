@@ -14,7 +14,7 @@ The `deeptokens` MCP server (`.mcp.json`) gives you `pi_run`, `pi_spawn`, `pi_wa
 ## Layout
 
 - `packages/core`: the fleet. Public surface is `src/index.ts` only.
-  - `fleet/fleet.ts` is the deep module: ten methods hide processes, worktrees, auth and state.
+  - `fleet/fleet.ts` is the deep module: eleven methods hide processes, worktrees, auth and state.
   - `fleet/job.ts` is a pure reducer: pi events in, job snapshot out.
   - `pi/` is the only code that knows pi's wire protocol. `transport.ts` is the port,
     `rpc-transport.ts` the adapter, `wire.ts` the zod-validated projection.

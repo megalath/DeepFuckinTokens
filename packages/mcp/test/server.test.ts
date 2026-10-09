@@ -21,9 +21,24 @@ function fakeFleet(): Fleet {
     ),
     kill: vi.fn(async () => Promise.resolve(snapshot)),
     models: vi.fn(async () =>
-      Promise.resolve({ aliases: [], defaultModel: 'gpt', providers: [], available: [] }),
+      Promise.resolve({
+        aliases: [],
+        defaultModel: 'gpt',
+        defaultThinking: 'medium' as const,
+        providers: [],
+        available: [],
+      }),
     ),
     close: vi.fn(async () => Promise.resolve()),
+    routes: vi.fn(() => [
+      {
+        alias: 'fast',
+        target: { provider: 'openai-codex', id: 'gpt-5.3-codex-spark' },
+        useFor: 'renames and boilerplate',
+        thinking: 'low' as const,
+      },
+      { alias: 'raw', target: { provider: 'openai-codex', id: 'gpt-5.5' } },
+    ]),
   }
 }
 
@@ -55,6 +70,19 @@ describe('deeptokens MCP server', () => {
       'pi_wait',
     ])
     expect(client.getInstructions()).toContain('contractors')
+  })
+
+  it('tells the model what each alias is for and its default effort', async () => {
+    const client = await connect(fakeFleet())
+    expect(client.getInstructions()).toContain(
+      '- `fast` (openai-codex/gpt-5.3-codex-spark, effort low): renames and boilerplate\n- `raw` (openai-codex/gpt-5.5)',
+    )
+    const { tools } = await client.listTools()
+    const spawn = tools.find((tool) => tool.name === 'pi_spawn')
+    const model = (spawn?.inputSchema.properties as Record<string, { description?: string }>)[
+      'model'
+    ]
+    expect(model?.description).toContain('"fast", "raw"')
   })
 
   it('passes a spec through without undefined fields and converts seconds', async () => {

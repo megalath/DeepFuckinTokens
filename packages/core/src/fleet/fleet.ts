@@ -10,6 +10,7 @@ import type {
   JobResult,
   JobSnapshot,
   ModelReport,
+  ModelRoute,
   TaskSpec,
   Workspace,
 } from '../types.js'
@@ -39,6 +40,9 @@ export interface Fleet {
   collect(id: string): Promise<JobResult>
   /** Stops a job and throws away its worktree and branch. */
   kill(id: string): Promise<JobSnapshot>
+  /** The configured aliases, without asking pi anything. */
+  routes(): readonly ModelRoute[]
+  /** The routes checked against pi: which resolve, and whether pi is logged in. */
   models(): Promise<ModelReport>
   /** Kills every live job. The fleet refuses new work afterwards. */
   close(): Promise<void>
@@ -124,6 +128,9 @@ export function createFleet(deps: FleetDeps): Fleet {
     transition(job, { ...job.snapshot, state: 'failed', endedAt: now(), error: messageOf(error) })
   }
 
+  const routes = (): readonly ModelRoute[] =>
+    Object.entries(config.aliases).map(([alias, route]) => ({ alias, ...route }))
+
   const spawn = async (spec: TaskSpec): Promise<JobSnapshot> => {
     if (isClosed) throw new DeepTokensError('fleet-closed', 'The fleet is shut down.')
     if (live() >= config.maxConcurrent) {
@@ -133,13 +140,14 @@ export function createFleet(deps: FleetDeps): Fleet {
       )
     }
     const modelName = spec.model ?? config.defaultModel
-    const model = resolveModel(config, modelName)
-    if (model === undefined) {
+    const route = resolveModel(config, modelName)
+    if (route === undefined) {
       throw new DeepTokensError(
         'unknown-model',
         `"${modelName}" is not an alias (${Object.keys(config.aliases).join(', ')}) or provider/model-id.`,
       )
     }
+    const model = route.target
     const [auth] = await providerStatus(deps.agentDir, [model.provider])
     if (auth !== undefined && !auth.isLoggedIn) {
       throw new DeepTokensError(
@@ -182,7 +190,7 @@ export function createFleet(deps: FleetDeps): Fleet {
         {
           cwd: workspace.path,
           model,
-          thinking: spec.thinking ?? config.defaultThinking,
+          thinking: spec.thinking ?? route.thinking ?? config.defaultThinking,
           tools: config.tools[mode],
         },
         onEvent(job),
@@ -275,19 +283,21 @@ export function createFleet(deps: FleetDeps): Fleet {
         .map((job) => job.snapshot)
         .sort((a, b) => a.startedAt.localeCompare(b.startedAt)),
 
+    routes,
+
     async models() {
       const available = await transport.listModels()
       const has = (provider: string, modelId: string): boolean =>
         available.some((model) => model.provider === provider && model.id === modelId)
-      const aliases = Object.entries(config.aliases).map(([alias, target]) => ({
-        alias,
-        target,
-        isAvailable: has(target.provider, target.id),
+      const aliases = routes().map((route) => ({
+        ...route,
+        isAvailable: has(route.target.provider, route.target.id),
       }))
       const providers = [...new Set(aliases.map(({ target }) => target.provider))]
       return {
         aliases,
         defaultModel: config.defaultModel,
+        defaultThinking: config.defaultThinking,
         providers: await providerStatus(deps.agentDir, providers),
         available: available.filter((model) => providers.includes(model.provider)),
       }

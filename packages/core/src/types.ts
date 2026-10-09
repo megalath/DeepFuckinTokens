@@ -78,13 +78,20 @@ export interface ProviderStatus {
   readonly loginHint?: string
 }
 
+/** A named model choice: what it runs, what it is for, and its default effort. */
+export interface ModelRoute {
+  readonly alias: string
+  readonly target: ModelRef
+  /** One line telling the lead when to pick this alias. */
+  readonly useFor?: string
+  /** Effort used when a job names this alias and no `thinking`. pi clamps it per model. */
+  readonly thinking?: ThinkingLevel
+}
+
 export interface ModelReport {
-  readonly aliases: readonly {
-    readonly alias: string
-    readonly target: ModelRef
-    readonly isAvailable: boolean
-  }[]
+  readonly aliases: readonly (ModelRoute & { readonly isAvailable: boolean })[]
   readonly defaultModel: string
+  readonly defaultThinking: ThinkingLevel
   readonly providers: readonly ProviderStatus[]
   /** Models pi holds credentials for, among the aliased providers. */
   readonly available: readonly ModelRef[]

@@ -11,7 +11,7 @@ export type * from './types.js'
 export { THINKING_LEVELS } from './types.js'
 export { DeepTokensError, type DeepTokensErrorCode } from './errors.js'
 export type { Fleet } from './fleet/fleet.js'
-export type { DeepTokensConfig, DeepTokensConfigInput } from './config/config.js'
+export type { AliasTarget, DeepTokensConfig, DeepTokensConfigInput } from './config/config.js'
 export { CONFIG_FILE, parseConfig } from './config/config.js'
 export type { PiEvent, PiSession, PiSessionOptions, PiTransport } from './pi/transport.js'
 

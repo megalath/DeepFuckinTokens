@@ -22,7 +22,7 @@ Claude Code (master)
 5. **Write jobs get their own worktree, committed on settle.** Claude gets branch, commit, diffstat and patch back, and merges or deletes. Nothing touches the main tree.
 6. **Write jobs get no bash by default.** pi has no permission prompts; a worktree fences files, not shell commands. Opt in per repo via config until the guard extension (M3) exists.
 7. **Auth stays in pi.** `pnpm pi` → `/login` → OpenAI ChatGPT Plus/Pro (Codex). pi stores and refreshes the token. The fleet only checks the provider key is present and names the fix if not.
-8. **Aliases, not raw ids.** `gpt` → `openai-codex/gpt-6.1-sol`, `fast` → `openai-codex/gpt-5.3-codex-spark`. Raw `provider/id` also accepted.
+8. **Aliases are routes, not just names.** Each carries a model, a one-line `useFor` and a default effort (`gpt` medium, `fast` low, `deep` xhigh). Claude reads them in the MCP instructions and the `model` schema, so it routes on purpose instead of guessing. Effort precedence: job, then alias, then `defaultThinking`; pi clamps per model.
 
 ## Status
 
@@ -31,7 +31,7 @@ Claude Code (master)
 - `@deeptokens/core`: fleet, RPC transport, job reducer, worktrees, config, auth check
 - `@deeptokens/mcp`: 8 tools (`pi_run/spawn/wait/send/status/collect/kill/models`) plus delegation instructions
 - Max-strict TS, `strictTypeChecked` ESLint, Prettier, Vitest, CI
-- 41 unit tests (fake transport, fake pi process, real git); live tests boot the real pi and skip the paid call without a login
+- 43 unit tests (fake transport, fake pi process, real git); live tests boot the real pi and skip the paid call without a login
 
 **Next:**
 

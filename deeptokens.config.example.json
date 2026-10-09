@@ -1,8 +1,22 @@
 {
   "defaultModel": "gpt",
   "aliases": {
-    "gpt": "openai-codex/gpt-6.1-sol",
-    "fast": "openai-codex/gpt-5.3-codex-spark"
+    "gpt": {
+      "model": "openai-codex/gpt-6.1-sol",
+      "useFor": "Default for real coding: multi-file changes, features, refactors, code review.",
+      "thinking": "medium"
+    },
+    "fast": {
+      "model": "openai-codex/gpt-5.3-codex-spark",
+      "useFor": "Mechanical, fully specified work: renames, boilerplate, test scaffolding, summarizing files.",
+      "thinking": "low"
+    },
+    "deep": {
+      "model": "openai-codex/gpt-6.1-sol",
+      "useFor": "Hard problems: stubborn bugs, concurrency, security-sensitive logic, a second opinion on a design.",
+      "thinking": "xhigh"
+    },
+    "luna": "openai-codex/gpt-6-luna"
   },
   "defaultThinking": "medium",
   "maxConcurrent": 3,

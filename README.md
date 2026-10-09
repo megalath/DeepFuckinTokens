@@ -34,8 +34,25 @@ Claude Code was started in.
 | `pi_kill`    | Stop a job, delete its worktree and branch                              |
 | `pi_models`  | Aliases, what they resolve to, login state with the fix                 |
 
+## Picking models and effort
+
+Tell Claude in plain English ("use `fast`", "go deep on this one") or let it route. Each alias names a
+model, what it's for, and a default effort, and Claude reads all three:
+
+| Alias  | Model                              | Effort | For                                                 |
+| ------ | ---------------------------------- | ------ | --------------------------------------------------- |
+| `gpt`  | `openai-codex/gpt-6.1-sol`         | medium | default: multi-file changes, features, refactors    |
+| `fast` | `openai-codex/gpt-5.3-codex-spark` | low    | renames, boilerplate, test scaffolding, summaries   |
+| `deep` | `openai-codex/gpt-6.1-sol`         | xhigh  | stubborn bugs, concurrency, security, design review |
+
+Effort on a job beats the alias's effort, which beats `defaultThinking`. pi clamps it to what the
+model supports. Raw `provider/model-id` works too, with no defaults of its own.
+
 ## Config
 
-Optional `deeptokens.config.json` at the repo root; see `deeptokens.config.example.json`.
+Optional `deeptokens.config.json` at the repo root; see `deeptokens.config.example.json`. An alias is
+either `{ "model", "useFor", "thinking" }` or a bare `"provider/model-id"`. Restart the MCP server
+after editing it: Claude reads the routes when the server starts.
+
 Write jobs get no `bash` by default: pi has no permission prompts, and a worktree fences file
 edits, not shell commands. Add `"bash"` to `tools.write` once you accept that.

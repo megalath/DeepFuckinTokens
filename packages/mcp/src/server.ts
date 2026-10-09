@@ -2,7 +2,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 
-import { DeepTokensError, THINKING_LEVELS, type Fleet, type TaskSpec } from '@deeptokens/core'
+import {
+  DeepTokensError,
+  THINKING_LEVELS,
+  type Fleet,
+  type ModelRoute,
+  type TaskSpec,
+} from '@deeptokens/core'
 
 const INSTRUCTIONS = `deeptokens runs pi coding-agent workers on non-Anthropic models (OpenAI via the user's ChatGPT/Codex subscription). You are the lead; workers are contractors.
 
@@ -14,26 +20,46 @@ mode "read" (default) looks at the repo in place. mode "write" edits a private g
 For parallel work, pi_spawn several jobs, then pi_wait on each.`
 
 const jobId = z.string().describe('The id pi_spawn or pi_run returned.')
-const taskShape = {
-  task: z
-    .string()
-    .min(1)
-    .describe(
-      'Complete instructions: files, acceptance criteria, constraints. Workers start cold.',
-    ),
-  model: z
-    .string()
-    .optional()
-    .describe(
-      'An alias from pi_models (e.g. "gpt", "fast") or provider/model-id. Omit for the default.',
-    ),
-  mode: z
-    .enum(['read', 'write'])
-    .optional()
-    .describe(
-      '"read" (default): inspect in place. "write": edit an isolated worktree, get a commit back.',
-    ),
-  thinking: z.enum(THINKING_LEVELS).optional().describe('Reasoning effort. Omit for the default.'),
+
+/** One line per alias, e.g. `fast` (openai-codex/gpt-5.3-codex-spark, effort low): renames… */
+export function describeRoutes(routes: readonly ModelRoute[]): string {
+  return routes
+    .map(({ alias, target, useFor, thinking }) => {
+      const effort = thinking === undefined ? '' : `, effort ${thinking}`
+      const purpose = useFor === undefined ? '' : `: ${useFor}`
+      return `- \`${alias}\` (${target.provider}/${target.id}${effort})${purpose}`
+    })
+    .join('\n')
+}
+
+function taskShape(routes: readonly ModelRoute[]) {
+  const aliases = routes.map(({ alias }) => `"${alias}"`).join(', ')
+  return {
+    task: z
+      .string()
+      .min(1)
+      .describe(
+        'Complete instructions: files, acceptance criteria, constraints. Workers start cold.',
+      ),
+    model: z
+      .string()
+      .optional()
+      .describe(
+        `An alias (${aliases}; see the server instructions for when to use each) or provider/model-id. Omit for the default.`,
+      ),
+    mode: z
+      .enum(['read', 'write'])
+      .optional()
+      .describe(
+        '"read" (default): inspect in place. "write": edit an isolated worktree, get a commit back.',
+      ),
+    thinking: z
+      .enum(THINKING_LEVELS)
+      .optional()
+      .describe(
+        "Reasoning effort. Omit to use the alias's own effort. pi clamps it to what the model supports.",
+      ),
+  }
 }
 
 type TaskInput = { [K in keyof TaskSpec]-?: TaskSpec[K] | undefined } & { task: string }
@@ -78,7 +104,13 @@ const seconds = (value: number): number => value * 1_000
 
 /** The MCP face of a fleet: eight tools, each a thin call into it. */
 export function createServer(fleet: Fleet, version: string): McpServer {
-  const server = new McpServer({ name: 'deeptokens', version }, { instructions: INSTRUCTIONS })
+  const routes = fleet.routes()
+  const shape = taskShape(routes)
+  const instructions = `${INSTRUCTIONS}
+
+Model routing. Pick the alias whose purpose fits; override "thinking" only when the job is unusually easy or hard:
+${describeRoutes(routes)}`
+  const server = new McpServer({ name: 'deeptokens', version }, { instructions })
 
   server.registerTool(
     'pi_run',
@@ -87,7 +119,7 @@ export function createServer(fleet: Fleet, version: string): McpServer {
       description:
         'Runs one task on a pi worker and waits for its answer (killed if it outlives timeoutSec). Best for jobs under ~5 minutes. Write jobs return the commit, diffstat and patch.',
       inputSchema: {
-        ...taskShape,
+        ...shape,
         timeoutSec: z.number().int().min(10).max(600).default(300),
       },
     },
@@ -101,7 +133,7 @@ export function createServer(fleet: Fleet, version: string): McpServer {
       title: 'Start a pi worker',
       description:
         'Starts a task on a pi worker in the background and returns its job at once. Follow with pi_wait, then pi_collect.',
-      inputSchema: taskShape,
+      inputSchema: shape,
     },
     async (spec) => answer(async () => fleet.spawn(toSpec(spec))),
   )
@@ -173,7 +205,7 @@ export function createServer(fleet: Fleet, version: string): McpServer {
     {
       title: 'pi models and logins',
       description:
-        'Model aliases and what they resolve to, whether pi is logged in to each provider (with the fix if not), and the models available.',
+        'Each alias with its model, purpose and default effort, whether it resolves, whether pi is logged in to its provider (with the fix if not), and the models available.',
       annotations: { readOnlyHint: true },
     },
     async () => answer(async () => fleet.models()),

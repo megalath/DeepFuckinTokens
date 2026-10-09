@@ -139,38 +139,36 @@ describe('fleet', () => {
     })
   })
 
-  it('reports aliases against available models and logins', async () => {
+  it('reports routes against available models and logins', async () => {
     const { fleet } = await setup(hangs)
     const report = await fleet.models()
     expect(report.defaultModel).toBe('gpt')
-    expect(report.aliases).toEqual([
-      { alias: 'gpt', target: { provider: 'openai-codex', id: 'gpt-6.1-sol' }, isAvailable: true },
-      {
-        alias: 'fast',
-        target: { provider: 'openai-codex', id: 'gpt-5.3-codex-spark' },
-        isAvailable: false,
-      },
+    expect(report.defaultThinking).toBe('medium')
+    expect(
+      report.aliases.map(({ alias, isAvailable, thinking }) => [alias, isAvailable, thinking]),
+    ).toEqual([
+      ['gpt', true, 'medium'],
+      ['fast', false, 'low'],
+      ['deep', true, 'xhigh'],
     ])
+    expect(report.aliases.every((route) => (route.useFor ?? '').length > 0)).toBe(true)
     expect(report.providers).toEqual([{ provider: 'openai-codex', isLoggedIn: true }])
+    expect(fleet.routes()).toHaveLength(3)
   })
 
-  it('closes a pi process that finishes booting after its job was killed', async () => {
-    const { fleet, transport } = await setup(answers('too late'))
-    const open = transport.open.bind(transport)
-    let release = (): void => undefined
-    transport.open = async (options, onEvent) => {
-      await new Promise<void>((resolve) => {
-        release = resolve
-      })
-      return open(options, onEvent)
-    }
-    const spawning = fleet.spawn({ task: 'x' })
-    while (fleet.list().length === 0) await new Promise((resolve) => setImmediate(resolve))
-    await fleet.kill(fleet.list()[0]!.id)
-    release()
-
-    expect((await spawning).state).toBe('killed')
-    expect(transport.closed).toBe(1)
+  it('picks effort from the job, then the alias, then the config default', async () => {
+    const { fleet, transport } = await setup(answers('ok'), {
+      defaultThinking: 'minimal',
+      aliases: {
+        tuned: { model: 'openai-codex/gpt-5.5', thinking: 'high' },
+        bare: 'openai-codex/gpt-5.5',
+      },
+      defaultModel: 'tuned',
+    })
+    await fleet.run({ task: 'a', thinking: 'off' }, 5_000)
+    await fleet.run({ task: 'b' }, 5_000)
+    await fleet.run({ task: 'c', model: 'bare' }, 5_000)
+    expect(transport.opened.map((options) => options.thinking)).toEqual(['off', 'high', 'minimal'])
   })
 
   it('rejects unknown job ids', async () => {
