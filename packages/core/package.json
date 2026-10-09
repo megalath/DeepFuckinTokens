@@ -6,7 +6,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "@deeptokens/source": "./src/index.ts",
+      "@deeptokens/source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }

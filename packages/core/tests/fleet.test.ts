@@ -3,48 +3,11 @@ import { join } from 'node:path'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { parseConfig, type DeepTokensConfigInput } from '../src/config/config.js'
-import { createFleet } from '../src/fleet/fleet.js'
-import { git } from '../src/workspace/git.js'
-import { createWorktrees, gitCommonDir, type Worktrees } from '../src/workspace/worktree.js'
-import { fakeTransport, reply, type Script } from './helpers/fake-transport.js'
+import { openFleet, parseConfig } from '../index.js'
+import { answers, fakeTransport, hangs, reply } from './helpers/fake-transport.js'
+import { scriptedFleet as setup, tick } from './helpers/fleet.js'
+import { git } from './helpers/git.js'
 import { tmpRepo } from './helpers/repo.js'
-
-async function setup(
-  script: Script,
-  config: DeepTokensConfigInput = {},
-  wrap: (worktrees: Worktrees) => Worktrees = (worktrees) => worktrees,
-) {
-  const { root, agentDir } = await tmpRepo()
-  const parsed = parseConfig(config)
-  const transport = fakeTransport(script)
-  const base = join(await gitCommonDir(root), 'deeptokens', 'worktrees')
-  let ids = 0
-  const fleet = createFleet({
-    root,
-    agentDir,
-    config: parsed,
-    transport,
-    worktrees: wrap(createWorktrees(root, base, parsed.branchPrefix)),
-    newId: () => `j${String(++ids)}`,
-  })
-  return { fleet, transport, root, agentDir }
-}
-
-const tick = async (): Promise<void> =>
-  new Promise((resolve) => {
-    setImmediate(resolve)
-  })
-
-const answers =
-  (text: string): Script =>
-  ({ emit }) => {
-    for (const event of reply(text)) emit(event)
-  }
-
-const hangs: Script = ({ emit }) => {
-  emit({ type: 'turn-start' })
-}
 
 describe('fleet', () => {
   it('runs a read job in place with read-only tools', async () => {
@@ -70,12 +33,13 @@ describe('fleet', () => {
     })
     const result = await fleet.run({ task: 'add NEW.md', mode: 'write', model: 'fast' }, 5_000)
 
-    expect(result.changes).toMatchObject({ branch: 'dt/j1', isPatchTruncated: false })
+    const branch = `dt/${result.job.id}`
+    expect(result.changes).toMatchObject({ branch, isPatchTruncated: false })
     expect(result.changes?.patch).toContain('+from the worker')
     expect(result.changes?.stat).toContain('NEW.md')
-    expect(await git(root, ['show', 'dt/j1:NEW.md'])).toBe('from the worker\n')
+    expect(await git(root, ['show', `${branch}:NEW.md`])).toBe('from the worker\n')
     expect(await git(root, ['status', '--porcelain'])).toBe('')
-    expect(await git(root, ['worktree', 'list'])).not.toContain('j1')
+    expect(await git(root, ['worktree', 'list'])).not.toContain(result.job.id)
   })
 
   it('drops the branch of a write job that changed nothing', async () => {
@@ -205,24 +169,15 @@ describe('fleet', () => {
   })
 
   it('leaves no branch or worktree when closed mid-spawn', async () => {
-    let release = (): void => undefined
-    const { fleet, root } = await setup(hangs, {}, (worktrees) => ({
-      ...worktrees,
-      create: async (worktree) => {
-        await new Promise<void>((resolve) => {
-          release = resolve
-        })
-        return worktrees.create(worktree)
-      },
-    }))
+    const { fleet, root } = await setup(hangs)
     const spawning = fleet.spawn({ task: 'x', mode: 'write' })
+    // The job is listed before git starts making its worktree, so this close lands mid-spawn.
     while (fleet.list().length === 0) await tick()
-    const closing = fleet.close()
-    release()
-    await closing
-    expect((await spawning).state).toBe('killed')
+    await fleet.close()
+    const job = await spawning
+    expect(job.state).toBe('killed')
     expect(await git(root, ['branch', '--list', 'dt/*'])).toBe('')
-    expect(await git(root, ['worktree', 'list'])).not.toContain('j1')
+    expect(await git(root, ['worktree', 'list'])).not.toContain(job.id)
   })
 
   it('kill on a finished write job deletes its branch; close keeps finished branches', async () => {
@@ -250,13 +205,7 @@ describe('fleet', () => {
   })
 
   it('honors the wait timeout while a kill is still cleaning up', async () => {
-    const { fleet } = await setup(hangs, {}, (worktrees) => ({
-      ...worktrees,
-      discard: async (worktree) => {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        return worktrees.discard(worktree)
-      },
-    }))
+    const { fleet } = await setup(hangs, {}, { closeDelayMs: 500 })
     const job = await fleet.spawn({ task: 'x', mode: 'write' })
     const killing = fleet.kill(job.id)
     const started = Date.now()
@@ -275,5 +224,32 @@ describe('fleet', () => {
   it('rejects unknown job ids', async () => {
     const { fleet } = await setup(hangs)
     expect(() => fleet.status('nope')).toThrow(/nope/)
+  })
+
+  it('keeps the commit when the patch is too big to return whole', async () => {
+    const { fleet, root } = await setup(async ({ options, emit }) => {
+      await writeFile(join(options.cwd, 'big.txt'), 'line of text\n'.repeat(40_000))
+      for (const event of reply('done')) emit(event)
+    })
+    const { changes } = await fleet.run({ task: 'big change', mode: 'write' }, 10_000)
+
+    expect(changes?.isPatchTruncated).toBe(true)
+    expect(Buffer.byteLength(changes?.patch ?? '')).toBeLessThanOrEqual(200_000)
+    expect(changes?.stat).toContain('big.txt')
+    expect((await git(root, ['rev-parse', changes?.branch ?? ''])).trim()).toBe(changes?.commit)
+  })
+
+  it('explains that write jobs need a first commit', async () => {
+    const { root, agentDir } = await tmpRepo({ commit: false })
+    const fleet = await openFleet({
+      cwd: root,
+      config: parseConfig({ agentDir }),
+      transport: fakeTransport(hangs),
+    })
+    const job = await fleet.spawn({ task: 'x', mode: 'write' })
+    expect(job).toMatchObject({
+      state: 'failed',
+      error: expect.stringContaining('no commits yet') as unknown,
+    })
   })
 })

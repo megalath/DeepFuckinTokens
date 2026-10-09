@@ -8,5 +8,10 @@
     "sourceMap": false,
     "customConditions": ["@deeptokens/source"]
   },
-  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "vitest.config.ts"]
+  "include": [
+    "packages/*/*.ts",
+    "packages/*/lib/**/*.ts",
+    "packages/*/tests/**/*.ts",
+    "vitest.config.ts"
+  ]
 }

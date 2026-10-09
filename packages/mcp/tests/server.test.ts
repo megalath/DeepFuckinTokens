@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { DeepTokensError, type Fleet, type JobSnapshot } from '@deeptokens/core'
 
-import { createServer } from '../src/server.js'
+import { createServer } from '../server.js'
 
 const snapshot = { id: 'j1', state: 'running' } as unknown as JobSnapshot
 

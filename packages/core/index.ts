@@ -1,19 +1,19 @@
 import { join, resolve } from 'node:path'
 
-import { defaultAgentDir } from './auth/auth.js'
-import { loadConfig, type DeepTokensConfig } from './config/config.js'
-import { createFleet, type Fleet } from './fleet/fleet.js'
-import { createRpcTransport } from './pi/rpc-transport.js'
-import type { PiTransport } from './pi/transport.js'
-import { createWorktrees, gitCommonDir, repoRoot } from './workspace/worktree.js'
+import { defaultAgentDir } from './lib/auth/auth.js'
+import { loadConfig, type DeepTokensConfig } from './lib/config/config.js'
+import { createFleet, type Fleet } from './lib/fleet/fleet.js'
+import { createRpcTransport } from './lib/pi/rpc-transport.js'
+import type { PiTransport } from './lib/pi/transport.js'
+import { createWorktrees, gitCommonDir, repoRoot } from './lib/workspace/worktree.js'
 
-export type * from './types.js'
-export { THINKING_LEVELS } from './types.js'
-export { DeepTokensError, type DeepTokensErrorCode } from './errors.js'
-export type { Fleet } from './fleet/fleet.js'
-export type { AliasTarget, DeepTokensConfig, DeepTokensConfigInput } from './config/config.js'
-export { CONFIG_FILE, parseConfig } from './config/config.js'
-export type { PiEvent, PiSession, PiSessionOptions, PiTransport } from './pi/transport.js'
+export type * from './lib/types.js'
+export { THINKING_LEVELS } from './lib/types.js'
+export { DeepTokensError, type DeepTokensErrorCode } from './lib/errors.js'
+export type { Fleet } from './lib/fleet/fleet.js'
+export type { AliasTarget, DeepTokensConfig, DeepTokensConfigInput } from './lib/config/config.js'
+export { CONFIG_FILE, parseConfig } from './lib/config/config.js'
+export type { PiEvent, PiSession, PiSessionOptions, PiTransport } from './lib/pi/transport.js'
 
 export interface OpenFleetOptions {
   /** Any directory inside the git repo the workers serve. Defaults to the process cwd. */

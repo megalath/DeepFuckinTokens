@@ -22,6 +22,7 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm lint
+      - run: pnpm lint:boundaries
       - run: pnpm test
       # Boots the real pi binary; the paid Codex call skips without a login.
       - run: pnpm test:live

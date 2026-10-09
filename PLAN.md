@@ -46,4 +46,4 @@ Claude Code (master)
 
 - **Cold-start workers.** The win depends on tight briefs. A sloppy spec costs more in rework than it saves.
 - **Subscription rate windows.** ChatGPT-plan usage is metered in rolling windows. `maxConcurrent` defaults to 3; watch for 429s surfacing as job errors.
-- **pi moves fast** (1.1.0 shipped 2026-10-07). Version is pinned; protocol knowledge lives in `packages/core/src/pi/` only.
+- **pi moves fast** (1.1.0 shipped 2026-10-07). Version is pinned; protocol knowledge lives in `packages/core/lib/pi/` only.

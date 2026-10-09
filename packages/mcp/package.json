@@ -9,7 +9,7 @@
   },
   "exports": {
     ".": {
-      "@deeptokens/source": "./src/server.ts",
+      "@deeptokens/source": "./server.ts",
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js"
     }

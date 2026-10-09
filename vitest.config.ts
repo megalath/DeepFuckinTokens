@@ -12,7 +12,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['packages/*/test/**/*.test.ts'],
+          include: ['packages/*/tests/**/*.test.ts'],
           exclude: ['**/*.live.test.ts'],
         },
       },
@@ -22,7 +22,7 @@ export default defineConfig({
               extends: true,
               test: {
                 name: 'live',
-                include: ['packages/*/test/**/*.live.test.ts'],
+                include: ['packages/*/tests/**/*.live.test.ts'],
                 testTimeout: 300_000,
               },
             },
