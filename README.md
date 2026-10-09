@@ -49,11 +49,21 @@ Claude Code was started in.
 Tell Claude in plain English ("use `fast`", "go deep on this one") or let it route. Each alias names a
 model, what it's for, and a default effort, and Claude reads all three:
 
-| Alias  | Model                | Effort | For                                                 |
-| ------ | -------------------- | ------ | --------------------------------------------------- |
-| `gpt`  | `openai/gpt-6.1-sol` | medium | default: multi-file changes, features, refactors    |
-| `fast` | `openai/gpt-6-luna`  | low    | renames, boilerplate, test scaffolding, summaries   |
-| `deep` | `openai/gpt-6.1-sol` | xhigh  | stubborn bugs, concurrency, security, design review |
+| Alias       | Model                  | Effort  | For                                                 |
+| ----------- | ---------------------- | ------- | --------------------------------------------------- |
+| `gpt`       | `openai/gpt-6.1-sol`   | medium  | default: multi-file changes, features, refactors    |
+| `fast`      | `openai/gpt-6-luna`    | low     | renames, boilerplate, test scaffolding, summaries   |
+| `deep`      | `openai/gpt-6.1-sol`   | xhigh   | stubborn bugs, concurrency, security, design review |
+| `sol-6-1`   | `openai/gpt-6.1-sol`   | default | GPT-6.1 Sol, when you ask for it by name            |
+| `astra-6`   | `openai/gpt-6-astra`   | default | GPT-6 Astra, when you ask for it by name            |
+| `sol-6`     | `openai/gpt-6-sol`     | default | GPT-6 Sol, when you ask for it by name              |
+| `luna-6`    | `openai/gpt-6-luna`    | default | GPT-6 Luna, when you ask for it by name             |
+| `sol-5-6`   | `openai/gpt-5.6-sol`   | default | GPT-5.6 Sol, when you ask for it by name            |
+| `terra-5-6` | `openai/gpt-5.6-terra` | default | GPT-5.6 Terra, when you ask for it by name          |
+| `luna-5-6`  | `openai/gpt-5.6-luna`  | default | GPT-5.6 Luna, when you ask for it by name           |
+
+The seven named routes are the models in the ChatGPT model picker; each one answered a live job on a
+ChatGPT login on 2026-10-08. They carry no effort of their own, so `defaultThinking` applies.
 
 Effort on a job beats the alias's effort, which beats `defaultThinking`. pi clamps it to what the
 model supports. Raw `provider/model-id` works too, with no defaults of its own.

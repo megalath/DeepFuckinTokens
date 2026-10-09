@@ -8,16 +8,45 @@ import { answers, fakeTransport, hangs } from './helpers/fake-transport.js'
 import { scriptedFleet } from './helpers/fleet.js'
 import { tmpRepo } from './helpers/repo.js'
 
+const DEFAULT_ROUTES = [
+  'gpt',
+  'fast',
+  'deep',
+  'sol-6-1',
+  'astra-6',
+  'sol-6',
+  'luna-6',
+  'sol-5-6',
+  'terra-5-6',
+  'luna-5-6',
+]
+
 describe('config', () => {
   it('defaults to OpenAI routes that each say what they are for', () => {
     const config = parseConfig({})
     expect(config.defaultModel).toBe('gpt')
-    expect(Object.keys(config.aliases)).toEqual(['gpt', 'fast', 'deep'])
+    expect(Object.keys(config.aliases)).toEqual(DEFAULT_ROUTES)
     for (const route of Object.values(config.aliases)) {
       expect(route.target.provider).toBe('openai')
       expect(route.useFor).toBeTruthy()
-      expect(route.thinking).toBeDefined()
     }
+    // The purpose routes set an effort; the by-name routes leave it to defaultThinking.
+    expect(
+      Object.entries(config.aliases)
+        .filter(([, route]) => route.thinking !== undefined)
+        .map(([alias]) => alias),
+    ).toEqual(['gpt', 'fast', 'deep'])
+    expect(Object.values(config.aliases).map((route) => route.target.id)).toEqual(
+      expect.arrayContaining([
+        'gpt-6.1-sol',
+        'gpt-6-astra',
+        'gpt-6-sol',
+        'gpt-6-luna',
+        'gpt-5.6-sol',
+        'gpt-5.6-terra',
+        'gpt-5.6-luna',
+      ]),
+    )
     expect(config.tools.write).not.toContain('bash')
   })
 
@@ -65,7 +94,7 @@ describe('config', () => {
     const { root } = await tmpRepo()
     const open = async () => openFleet({ cwd: root, transport: fakeTransport(hangs) })
 
-    expect((await open()).routes().map((route) => route.alias)).toEqual(['gpt', 'fast', 'deep'])
+    expect((await open()).routes().map((route) => route.alias)).toEqual(DEFAULT_ROUTES)
     await writeFile(
       join(root, CONFIG_FILE),
       JSON.stringify({ defaultModel: 'solo', aliases: { solo: 'openai/gpt-5.5' } }),

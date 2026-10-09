@@ -125,10 +125,17 @@ describe('fleet', () => {
       ['gpt', true, 'medium'],
       ['fast', false, 'low'],
       ['deep', true, 'xhigh'],
+      ['sol-6-1', true, undefined],
+      ['astra-6', false, undefined],
+      ['sol-6', false, undefined],
+      ['luna-6', false, undefined],
+      ['sol-5-6', false, undefined],
+      ['terra-5-6', false, undefined],
+      ['luna-5-6', false, undefined],
     ])
     expect(report.aliases.every((route) => (route.useFor ?? '').length > 0)).toBe(true)
     expect(report.providers).toEqual([{ provider: 'openai', isLoggedIn: true }])
-    expect(fleet.routes()).toHaveLength(3)
+    expect(fleet.routes()).toHaveLength(10)
   })
 
   it('picks effort from the job, then the alias, then the config default', async () => {

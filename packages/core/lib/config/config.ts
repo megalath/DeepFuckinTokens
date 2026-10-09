@@ -59,6 +59,36 @@ const DEFAULT_ALIASES = {
       'Hard problems: stubborn bugs, concurrency, security-sensitive logic, a second opinion on a design.',
     thinking: 'xhigh',
   },
+  // One route per model in the ChatGPT model picker, so the lead can be told to use any of them
+  // and pi_models reports each one's availability. No effort of their own: defaultThinking applies.
+  'sol-6-1': {
+    model: 'openai/gpt-6.1-sol',
+    useFor: 'GPT-6.1 Sol, by name. Use when the user asks for this model specifically.',
+  },
+  'astra-6': {
+    model: 'openai/gpt-6-astra',
+    useFor: 'GPT-6 Astra, by name. Use when the user asks for this model specifically.',
+  },
+  'sol-6': {
+    model: 'openai/gpt-6-sol',
+    useFor: 'GPT-6 Sol, by name. Use when the user asks for this model specifically.',
+  },
+  'luna-6': {
+    model: 'openai/gpt-6-luna',
+    useFor: 'GPT-6 Luna, by name. Use when the user asks for this model specifically.',
+  },
+  'sol-5-6': {
+    model: 'openai/gpt-5.6-sol',
+    useFor: 'GPT-5.6 Sol, by name. Use when the user asks for this model specifically.',
+  },
+  'terra-5-6': {
+    model: 'openai/gpt-5.6-terra',
+    useFor: 'GPT-5.6 Terra, by name. Use when the user asks for this model specifically.',
+  },
+  'luna-5-6': {
+    model: 'openai/gpt-5.6-luna',
+    useFor: 'GPT-5.6 Luna, by name. Use when the user asks for this model specifically.',
+  },
 } as const
 
 export const configSchema = z

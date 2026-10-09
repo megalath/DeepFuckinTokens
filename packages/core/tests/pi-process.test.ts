@@ -113,7 +113,7 @@ describe('a worker that is a real pi process', () => {
     const { fleet } = await fakePiFleet()
     const report = await fleet.models()
     expect(report.available).toEqual([{ provider: 'openai', id: 'gpt-5.5' }])
-    expect(report.aliases.map((route) => route.isAvailable)).toEqual([false, false, false])
+    expect(report.aliases.every((route) => !route.isAvailable)).toBe(true)
   })
 
   it('delivers a final record that has no trailing LF', async () => {
