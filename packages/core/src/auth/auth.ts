@@ -5,8 +5,15 @@ import { join } from 'node:path'
 import type { ProviderStatus } from '../types.js'
 
 const LOGIN_HINTS: Readonly<Record<string, string>> = {
+  openai:
+    'Run `pnpm pi`, type `/login openai`, choose "Sign in with ChatGPT" and finish in the browser (headless: paste the final redirect URL back into pi). pi refreshes the token itself.',
   'openai-codex':
-    'Run `pi`, type `/login`, choose OpenAI ChatGPT Plus/Pro (Codex), and finish in the browser. pi refreshes the token itself.',
+    'Legacy provider. Prefer `openai` with Sign in with ChatGPT. Otherwise run `pnpm pi`, type `/login openai-codex`.',
+}
+
+/** Env vars pi itself accepts as credentials for a provider. */
+const ENV_KEYS: Readonly<Record<string, readonly string[]>> = {
+  openai: ['OPENAI_API_KEY'],
 }
 
 export function defaultAgentDir(): string {
@@ -14,17 +21,19 @@ export function defaultAgentDir(): string {
 }
 
 /**
- * Which providers pi holds credentials for. Reads only the key names of
- * auth.json; token values never leave pi's file.
+ * Which providers pi holds credentials for: a key in auth.json, or an env var
+ * pi reads for that provider. Reads only names, never token values.
  */
 export async function providerStatus(
   agentDir: string,
   providers: readonly string[],
+  env: NodeJS.ProcessEnv = process.env,
 ): Promise<readonly ProviderStatus[]> {
   const stored = await storedProviders(agentDir)
   return providers.map((provider) => {
-    const isLoggedIn = stored.has(provider)
-    const hint = LOGIN_HINTS[provider] ?? `Run \`pi\`, type \`/login ${provider}\`.`
+    const isLoggedIn =
+      stored.has(provider) || (ENV_KEYS[provider] ?? []).some((key) => (env[key] ?? '') !== '')
+    const hint = LOGIN_HINTS[provider] ?? `Run \`pnpm pi\`, type \`/login ${provider}\`.`
     return isLoggedIn ? { provider, isLoggedIn } : { provider, isLoggedIn, loginHint: hint }
   })
 }

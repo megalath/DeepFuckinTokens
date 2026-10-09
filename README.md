@@ -1,7 +1,7 @@
 # DeepFuckinTokens
 
 Claude Code as the master harness, [pi](https://github.com/earendil-works/pi) as the worker harness,
-OpenAI models through your ChatGPT Plus/Pro (Codex) subscription doing the delegated grunt work.
+OpenAI models through your ChatGPT subscription (pi's Sign in with ChatGPT) doing the delegated grunt work.
 
 Claude plans, briefs, reviews and merges. pi workers read, edit and report. Write jobs land on their
 own git branch, so nothing touches your tree until Claude (or you) merges it.
@@ -11,8 +11,12 @@ own git branch, so nothing touches your tree until Claude (or you) merges it.
 ```bash
 pnpm install
 pnpm build
-pnpm pi            # pi's TUI: type /login, choose OpenAI ChatGPT Plus/Pro (Codex), finish in the browser
+pnpm pi            # pi's TUI: /login openai, choose "Sign in with ChatGPT", finish in the browser
 ```
+
+On a machine without a browser, pi prints the sign-in link; open it anywhere, sign in, and paste the
+URL your browser lands on (a dead `127.0.0.1:1455` page) back into pi. pi also accepts
+`OPENAI_API_KEY` for the `openai` provider, billed to the API instead of your subscription.
 
 Then open Claude Code in this repo and approve the `deeptokens` MCP server from `.mcp.json`.
 Ask Claude to call `pi_models` to confirm the login.
@@ -39,11 +43,11 @@ Claude Code was started in.
 Tell Claude in plain English ("use `fast`", "go deep on this one") or let it route. Each alias names a
 model, what it's for, and a default effort, and Claude reads all three:
 
-| Alias  | Model                              | Effort | For                                                 |
-| ------ | ---------------------------------- | ------ | --------------------------------------------------- |
-| `gpt`  | `openai-codex/gpt-6.1-sol`         | medium | default: multi-file changes, features, refactors    |
-| `fast` | `openai-codex/gpt-5.3-codex-spark` | low    | renames, boilerplate, test scaffolding, summaries   |
-| `deep` | `openai-codex/gpt-6.1-sol`         | xhigh  | stubborn bugs, concurrency, security, design review |
+| Alias  | Model                        | Effort | For                                                 |
+| ------ | ---------------------------- | ------ | --------------------------------------------------- |
+| `gpt`  | `openai/gpt-6.1-sol`         | medium | default: multi-file changes, features, refactors    |
+| `fast` | `openai/gpt-5.3-codex-spark` | low    | renames, boilerplate, test scaffolding, summaries   |
+| `deep` | `openai/gpt-6.1-sol`         | xhigh  | stubborn bugs, concurrency, security, design review |
 
 Effort on a job beats the alias's effort, which beats `defaultThinking`. pi clamps it to what the
 model supports. Raw `provider/model-id` works too, with no defaults of its own.

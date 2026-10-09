@@ -11,10 +11,7 @@ export async function tmpRepo(): Promise<{ root: string; agentDir: string }> {
   const agentDir = join(base, 'agent')
   await mkdir(root)
   await mkdir(agentDir)
-  await writeFile(
-    join(agentDir, 'auth.json'),
-    JSON.stringify({ 'openai-codex': { type: 'oauth' } }),
-  )
+  await writeFile(join(agentDir, 'auth.json'), JSON.stringify({ openai: { type: 'oauth' } }))
   await git(root, ['init', '-q', '-b', 'main'])
   await writeFile(join(root, 'README.md'), '# fixture\n')
   await writeFile(join(root, '.gitignore'), '.deeptokens/\n')

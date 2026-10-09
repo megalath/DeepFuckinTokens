@@ -13,7 +13,7 @@ describe('config', () => {
     expect(config.defaultModel).toBe('gpt')
     expect(Object.keys(config.aliases)).toEqual(['gpt', 'fast', 'deep'])
     for (const route of Object.values(config.aliases)) {
-      expect(route.target.provider).toBe('openai-codex')
+      expect(route.target.provider).toBe('openai')
       expect(route.useFor).toBeTruthy()
       expect(route.thinking).toBeDefined()
     }
@@ -24,20 +24,20 @@ describe('config', () => {
     const config = parseConfig({
       defaultModel: 'big',
       aliases: {
-        big: { model: 'openai-codex/gpt-6-sol', useFor: 'big jobs', thinking: 'high' },
-        plain: 'openai-codex/gpt-5.5',
+        big: { model: 'openai/gpt-6-sol', useFor: 'big jobs', thinking: 'high' },
+        plain: 'openai/gpt-5.5',
       },
     })
     expect(resolveModel(config, 'big')).toEqual({
-      target: { provider: 'openai-codex', id: 'gpt-6-sol' },
+      target: { provider: 'openai', id: 'gpt-6-sol' },
       useFor: 'big jobs',
       thinking: 'high',
     })
     expect(resolveModel(config, 'plain')).toEqual({
-      target: { provider: 'openai-codex', id: 'gpt-5.5' },
+      target: { provider: 'openai', id: 'gpt-5.5' },
     })
-    expect(resolveModel(config, 'openai-codex/gpt-6-luna')).toEqual({
-      target: { provider: 'openai-codex', id: 'gpt-6-luna' },
+    expect(resolveModel(config, 'openai/gpt-6-luna')).toEqual({
+      target: { provider: 'openai', id: 'gpt-6-luna' },
     })
     expect(resolveModel(config, 'nope')).toBeUndefined()
   })

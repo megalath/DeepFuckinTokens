@@ -21,7 +21,7 @@ For parallel work, pi_spawn several jobs, then pi_wait on each.`
 
 const jobId = z.string().describe('The id pi_spawn or pi_run returned.')
 
-/** One line per alias, e.g. `fast` (openai-codex/gpt-5.3-codex-spark, effort low): renames… */
+/** One line per alias, e.g. `fast` (openai/gpt-5.3-codex-spark, effort low): renames… */
 export function describeRoutes(routes: readonly ModelRoute[]): string {
   return routes
     .map(({ alias, target, useFor, thinking }) => {

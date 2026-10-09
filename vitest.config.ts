@@ -6,6 +6,7 @@ const live = process.env['DEEPTOKENS_LIVE'] === '1'
 export default defineConfig({
   resolve: { conditions: ['@deeptokens/source'] },
   test: {
+    unstubEnvs: true,
     projects: [
       {
         extends: true,

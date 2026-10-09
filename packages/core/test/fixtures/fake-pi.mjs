@@ -32,7 +32,7 @@ function handle(command) {
     case 'get_state':
       return respond({})
     case 'get_available_models':
-      return respond({ models: [{ provider: 'openai-codex', id: 'gpt-5.5', contextWindow: 1 }] })
+      return respond({ models: [{ provider: 'openai', id: 'gpt-5.5', contextWindow: 1 }] })
     case 'prompt':
       if (mode === 'crash-on-prompt') {
         process.stderr.write('fatal: out of tokens\n')

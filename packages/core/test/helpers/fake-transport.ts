@@ -31,7 +31,7 @@ export const reply = (text: string): PiEvent[] => [
 
 export function fakeTransport(
   script: Script,
-  models: readonly ModelRef[] = [{ provider: 'openai-codex', id: 'gpt-6.1-sol' }],
+  models: readonly ModelRef[] = [{ provider: 'openai', id: 'gpt-6.1-sol' }],
 ): FakeTransport {
   const opened: PiSessionOptions[] = []
   const sent: FakeTransport['sent'][number][] = []

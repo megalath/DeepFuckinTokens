@@ -11,7 +11,7 @@ const fresh: JobSnapshot = {
   state: 'starting',
   task: 't',
   mode: 'read',
-  model: { provider: 'openai-codex', id: 'gpt-5.5' },
+  model: { provider: 'openai', id: 'gpt-5.5' },
   workspace: { kind: 'shared', path: '/repo' },
   startedAt: T,
   turns: 0,

@@ -1,6 +1,6 @@
 # DeepFuckinTokens
 
-Claude Code is the lead; pi workers on OpenAI (ChatGPT/Codex subscription) do delegated work.
+Claude Code is the lead; pi workers on OpenAI (ChatGPT subscription via pi's Sign in with ChatGPT) do delegated work.
 The `deeptokens` MCP server (`.mcp.json`) gives you `pi_run`, `pi_spawn`, `pi_wait`, `pi_send`,
 `pi_status`, `pi_collect`, `pi_kill`, `pi_models`. Its instructions say when to delegate.
 
@@ -8,8 +8,8 @@ The `deeptokens` MCP server (`.mcp.json`) gives you `pi_run`, `pi_spawn`, `pi_wa
 
 - `pnpm install` then `pnpm build` (the MCP server runs from `packages/mcp/dist`)
 - `pnpm check`: format, typecheck, lint, unit tests. Run it before every commit.
-- `pnpm test:live`: real pi; the Codex call skips unless logged in
-- `pnpm pi`: pi's own TUI, for `/login`
+- `pnpm test:live`: real pi; the paid call skips unless logged in
+- `pnpm pi`: pi's own TUI, for `/login openai`
 
 ## Layout
 

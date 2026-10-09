@@ -33,11 +33,11 @@ function fakeFleet(): Fleet {
     routes: vi.fn(() => [
       {
         alias: 'fast',
-        target: { provider: 'openai-codex', id: 'gpt-5.3-codex-spark' },
+        target: { provider: 'openai', id: 'gpt-5.3-codex-spark' },
         useFor: 'renames and boilerplate',
         thinking: 'low' as const,
       },
-      { alias: 'raw', target: { provider: 'openai-codex', id: 'gpt-5.5' } },
+      { alias: 'raw', target: { provider: 'openai', id: 'gpt-5.5' } },
     ]),
   }
 }
@@ -75,7 +75,7 @@ describe('deeptokens MCP server', () => {
   it('tells the model what each alias is for and its default effort', async () => {
     const client = await connect(fakeFleet())
     expect(client.getInstructions()).toContain(
-      '- `fast` (openai-codex/gpt-5.3-codex-spark, effort low): renames and boilerplate\n- `raw` (openai-codex/gpt-5.5)',
+      '- `fast` (openai/gpt-5.3-codex-spark, effort low): renames and boilerplate\n- `raw` (openai/gpt-5.5)',
     )
     const { tools } = await client.listTools()
     const spawn = tools.find((tool) => tool.name === 'pi_spawn')

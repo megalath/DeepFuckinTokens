@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { parseConfig, type DeepTokensConfigInput } from '../src/config/config.js'
 import { createFleet } from '../src/fleet/fleet.js'
@@ -46,7 +46,7 @@ describe('fleet', () => {
     expect(result.job).toMatchObject({ state: 'settled', mode: 'read', turns: 1 })
     expect(transport.opened[0]).toMatchObject({
       cwd: root,
-      model: { provider: 'openai-codex', id: 'gpt-6.1-sol' },
+      model: { provider: 'openai', id: 'gpt-6.1-sol' },
       thinking: 'medium',
       tools: ['read', 'grep', 'find', 'ls'],
     })
@@ -120,6 +120,7 @@ describe('fleet', () => {
       code: 'unknown-model',
     })
     await writeFile(join(agentDir, 'auth.json'), '{}')
+    vi.stubEnv('OPENAI_API_KEY', '')
     await expect(fleet.spawn({ task: 'x' })).rejects.toMatchObject({
       code: 'not-logged-in',
       message: expect.stringContaining('/login') as unknown,
@@ -152,7 +153,7 @@ describe('fleet', () => {
       ['deep', true, 'xhigh'],
     ])
     expect(report.aliases.every((route) => (route.useFor ?? '').length > 0)).toBe(true)
-    expect(report.providers).toEqual([{ provider: 'openai-codex', isLoggedIn: true }])
+    expect(report.providers).toEqual([{ provider: 'openai', isLoggedIn: true }])
     expect(fleet.routes()).toHaveLength(3)
   })
 
@@ -160,8 +161,8 @@ describe('fleet', () => {
     const { fleet, transport } = await setup(answers('ok'), {
       defaultThinking: 'minimal',
       aliases: {
-        tuned: { model: 'openai-codex/gpt-5.5', thinking: 'high' },
-        bare: 'openai-codex/gpt-5.5',
+        tuned: { model: 'openai/gpt-5.5', thinking: 'high' },
+        bare: 'openai/gpt-5.5',
       },
       defaultModel: 'tuned',
     })

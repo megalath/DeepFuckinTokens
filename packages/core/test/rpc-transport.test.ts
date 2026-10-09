@@ -21,7 +21,7 @@ async function untilEvent(events: PiEvent[], type: PiEvent['type']): Promise<PiE
   throw new Error(`no ${type} event`)
 }
 
-const session = { cwd: process.cwd(), model: { provider: 'openai-codex', id: 'gpt-5.5' } }
+const session = { cwd: process.cwd(), model: { provider: 'openai', id: 'gpt-5.5' } }
 
 describe('rpc transport against a fake pi', () => {
   it('passes the worker flags and streams a run to settled', async () => {
@@ -70,7 +70,7 @@ describe('rpc transport against a fake pi', () => {
 
   it('lists models through a short-lived process', async () => {
     expect(await transportIn('normal').listModels()).toEqual([
-      { provider: 'openai-codex', id: 'gpt-5.5' },
+      { provider: 'openai', id: 'gpt-5.5' },
     ])
   })
 })

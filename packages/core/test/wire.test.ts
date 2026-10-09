@@ -90,7 +90,7 @@ describe('parseInbound', () => {
 describe('parseModels', () => {
   it('keeps provider and id', () => {
     expect(
-      parseModels({ models: [{ provider: 'openai-codex', id: 'gpt-5.5', contextWindow: 1 }] }),
-    ).toEqual([{ provider: 'openai-codex', id: 'gpt-5.5' }])
+      parseModels({ models: [{ provider: 'openai', id: 'gpt-5.5', contextWindow: 1 }] }),
+    ).toEqual([{ provider: 'openai', id: 'gpt-5.5' }])
   })
 })
