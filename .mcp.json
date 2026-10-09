@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "deeptokens": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["packages/mcp/dist/main.js"]
+    }
+  }
+}
