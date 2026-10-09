@@ -28,7 +28,7 @@ export interface Usage {
   readonly outputTokens: number
   readonly cacheReadTokens: number
   readonly cacheWriteTokens: number
-  /** Provider-reported cost. Subscription providers report 0. */
+  /** pi's estimate at API list prices. On a subscription login nothing is billed per call. */
   readonly costUsd: number
 }
 

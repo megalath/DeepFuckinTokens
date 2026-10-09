@@ -41,7 +41,7 @@ export default tseslint.config(
     // Deep-module boundaries: packages talk to each other through their public entry only,
     // and only the pi adapter may touch pi itself. Protocol drift then changes one file.
     files: ['packages/**/*.ts'],
-    ignores: ['packages/core/src/pi/rpc-transport.ts'],
+    ignores: ['packages/core/lib/pi/rpc-transport.ts'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',
@@ -50,13 +50,13 @@ export default tseslint.config(
             {
               name: '@earendil-works/pi-coding-agent',
               message:
-                'Only packages/core/src/pi/rpc-transport.ts may import pi. Go through PiTransport.',
+                'Only packages/core/lib/pi/rpc-transport.ts may import pi. Go through PiTransport.',
               allowTypeImports: false,
             },
           ],
           patterns: [
             {
-              group: ['@deeptokens/*/src/*', '@deeptokens/*/dist/*'],
+              group: ['@deeptokens/*/lib/*', '@deeptokens/*/dist/*'],
               message: 'Import a package by its public entry, not its internals.',
             },
           ],
@@ -65,11 +65,11 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/mcp/src/main.ts'],
+    files: ['packages/mcp/main.ts'],
     rules: { 'no-console': 'off' },
   },
   {
-    files: ['**/test/**/*.ts'],
+    files: ['**/tests/**/*.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
@@ -78,7 +78,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.{js,mjs}'],
+    files: ['**/*.{js,mjs,cjs}'],
     ...tseslint.configs.disableTypeChecked,
   },
   prettier,

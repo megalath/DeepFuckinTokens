@@ -21,7 +21,7 @@ For parallel work, pi_spawn several jobs, then pi_wait on each.`
 
 const jobId = z.string().describe('The id pi_spawn or pi_run returned.')
 
-/** One line per alias, e.g. `fast` (openai/gpt-5.3-codex-spark, effort low): renames… */
+/** One line per alias, e.g. `fast` (openai/gpt-6-luna, effort low): renames… */
 export function describeRoutes(routes: readonly ModelRoute[]): string {
   return routes
     .map(({ alias, target, useFor, thinking }) => {
@@ -206,7 +206,7 @@ ${describeRoutes(routes)}`
     {
       title: 'pi models and logins',
       description:
-        'Each alias with its model, purpose and default effort, whether it resolves, whether pi is logged in to its provider (with the fix if not), and the models available.',
+        "Each alias with its model, purpose and default effort, whether pi lists that model, whether pi is logged in to its provider (with the fix if not), and the models pi lists. isAvailable comes from pi's catalog, not from the account: a ChatGPT login can still refuse a listed model, and the job then fails with the provider's error.",
       annotations: { readOnlyHint: true },
     },
     async () => answer(async () => fleet.models()),

@@ -7,19 +7,23 @@ The `deeptokens` MCP server (`.mcp.json`) gives you `pi_run`, `pi_spawn`, `pi_wa
 ## Commands
 
 - `pnpm install` then `pnpm build` (the MCP server runs from `packages/mcp/dist`)
-- `pnpm check`: format, typecheck, lint, unit tests. Run it before every commit.
+- `pnpm check`: format, typecheck, lint, package boundaries, unit tests. Run it before every commit.
+- `pnpm lint:boundaries`: dependency-cruiser; fails on an import into another package's subfolder.
 - `pnpm test:live`: real pi; the paid call skips unless logged in
 - `pnpm pi`: pi's own TUI, for `/login openai`
 
 ## Layout
 
-- `packages/core`: the fleet. Public surface is `src/index.ts` only.
-  - `fleet/fleet.ts` is the deep module: eleven methods hide processes, worktrees, auth and state.
-  - `fleet/job.ts` is a pure reducer: pi events in, job snapshot out.
-  - `pi/` is the only code that knows pi's wire protocol. `transport.ts` is the port,
+Packages are deep modules: see [packages/README.md](./packages/README.md) before adding or importing one.
+
+- `packages/core`: the fleet. Public surface is `index.ts` only; everything else is in `lib/`.
+  - `lib/fleet/fleet.ts` is the deep module: eleven methods hide processes, worktrees, auth and state.
+  - `lib/fleet/job.ts` is a pure reducer: pi events in, job snapshot out.
+  - `lib/pi/` is the only code that knows pi's wire protocol. `transport.ts` is the port,
     `rpc-transport.ts` the adapter, `wire.ts` the zod-validated projection.
-  - `workspace/` git worktrees for write jobs.
+  - `lib/workspace/` git worktrees for write jobs.
 - `packages/mcp`: thin MCP face over a `Fleet`. No logic lives here.
+- `packages/example`: copy-me template for a new package.
 
 ## Rules
 
@@ -27,8 +31,10 @@ The `deeptokens` MCP server (`.mcp.json`) gives you `pi_run`, `pi_spawn`, `pi_wa
   `noUncheckedIndexedAccess`, `erasableSyntaxOnly` (no enums, no parameter properties).
   Model absent optionals as absent, not `undefined`.
 - ESLint is `strictTypeChecked`, zero warnings. Never add a disable comment to get green; fix the type.
-- Packages import each other by public entry only. Lint enforces it.
+- Packages import each other by public entry only, and tests import only entry points (their
+  own package's included). `pnpm lint:boundaries` enforces it.
 - Errors crossing the core boundary are `DeepTokensError` with a stable `code`.
 - Validate everything from outside the process (pi stdout, config, MCP input) with zod.
-- Unit tests use the fake transport (`test/helpers/fake-transport.ts`) or the fake pi
-  (`test/fixtures/fake-pi.mjs`); nothing in `pnpm test` touches the network.
+- Unit tests reach core through `openFleet` with the fake transport
+  (`tests/helpers/fake-transport.ts`) or the fake pi process (`tests/fixtures/fake-pi.mjs`);
+  nothing in `pnpm test` touches the network.

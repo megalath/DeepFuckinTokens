@@ -7,7 +7,7 @@
       "thinking": "medium"
     },
     "fast": {
-      "model": "openai/gpt-5.3-codex-spark",
+      "model": "openai/gpt-6-luna",
       "useFor": "Mechanical, fully specified work: renames, boilerplate, test scaffolding, summarizing files.",
       "thinking": "low"
     },
@@ -16,7 +16,34 @@
       "useFor": "Hard problems: stubborn bugs, concurrency, security-sensitive logic, a second opinion on a design.",
       "thinking": "xhigh"
     },
-    "luna": "openai/gpt-6-luna"
+    "sol-6-1": {
+      "model": "openai/gpt-6.1-sol",
+      "useFor": "GPT-6.1 Sol, by name. Use when the user asks for this model specifically."
+    },
+    "astra-6": {
+      "model": "openai/gpt-6-astra",
+      "useFor": "GPT-6 Astra, by name. Use when the user asks for this model specifically."
+    },
+    "sol-6": {
+      "model": "openai/gpt-6-sol",
+      "useFor": "GPT-6 Sol, by name. Use when the user asks for this model specifically."
+    },
+    "luna-6": {
+      "model": "openai/gpt-6-luna",
+      "useFor": "GPT-6 Luna, by name. Use when the user asks for this model specifically."
+    },
+    "sol-5-6": {
+      "model": "openai/gpt-5.6-sol",
+      "useFor": "GPT-5.6 Sol, by name. Use when the user asks for this model specifically."
+    },
+    "terra-5-6": {
+      "model": "openai/gpt-5.6-terra",
+      "useFor": "GPT-5.6 Terra, by name. Use when the user asks for this model specifically."
+    },
+    "luna-5-6": {
+      "model": "openai/gpt-5.6-luna",
+      "useFor": "GPT-5.6 Luna, by name. Use when the user asks for this model specifically."
+    }
   },
   "defaultThinking": "medium",
   "maxConcurrent": 3,
