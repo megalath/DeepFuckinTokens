@@ -5,7 +5,7 @@ workers on OpenAI models, through your ChatGPT subscription.
 
 ```bash
 npx -y @deeptokens/mcp pi     # /login openai, "Sign in with ChatGPT"
-npx -y @deeptokens/mcp init   # in the git repo to work on: writes .mcp.json and a CLAUDE.md note
+npx -y @deeptokens/mcp init   # asks: user level (every repo) or project level (this repo)
 ```
 
 Tools, model routing and config:

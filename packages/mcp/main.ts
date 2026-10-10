@@ -3,7 +3,9 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 import { openFleet, runPi, type Fleet } from '@deeptokens/core'
 
-import { initRepo } from './init.js'
+import { createInterface } from 'node:readline/promises'
+
+import { initRepo, initUser, USER_CONFIG_LABEL } from './init.js'
 import { createServer } from './server.js'
 
 const VERSION = '0.1.0'
@@ -23,20 +25,25 @@ if (command === 'pi') {
   }
 }
 if (command === 'init') {
+  const scope = await chooseScope(rest)
   try {
-    const report = await initRepo(process.cwd())
+    const report = scope === 'user' ? await initUser() : await initRepo(process.cwd())
     for (const { path, outcome } of [report.mcpConfig, report.claudeMd]) {
       console.log(`${outcome === 'added' ? 'wrote  ' : 'kept   '} ${path}`)
     }
     console.log(
-      'Next: run `npx -y @deeptokens/mcp pi` and `/login openai` if you have not yet, ' +
-        'then open Claude Code here and approve the deeptokens server.',
+      'Next: run `npx -y @deeptokens/mcp pi` and `/login openai` if you have not yet, then ' +
+        (scope === 'user'
+          ? 'restart Claude Code. The server is in every git repo you open, with nothing to approve.'
+          : 'open Claude Code here and approve the deeptokens server.'),
     )
     process.exit(0)
   } catch (error) {
     console.error(
-      `deeptokens: cannot set up: ${reason(error)}\n` +
-        'Run init in the directory you open Claude Code in, inside a git repository.',
+      `deeptokens: cannot set up: ${reason(error)}` +
+        (scope === 'user'
+          ? ''
+          : '\nRun init in the directory you open Claude Code in, inside a git repository.'),
     )
     process.exit(1)
   }
@@ -46,10 +53,52 @@ if (command !== undefined) {
   console.error(
     `deeptokens: unknown command "${command}"\n` +
       'Usage: deeptokens-mcp        start the MCP server on stdio (what Claude Code runs)\n' +
-      '       deeptokens-mcp init   set this repo up: .mcp.json and a CLAUDE.md note\n' +
+      '       deeptokens-mcp init   set Claude Code up; asks user level or project level\n' +
+      '                             (--user or --project answers it up front)\n' +
       '       deeptokens-mcp pi     open pi, to /login openai',
   )
   process.exit(2)
+}
+
+// The two installs reach different people (see init.ts), and neither is a safe guess: a silent
+// project default is what left the server unloaded for someone working across repos. So init
+// asks, and where it cannot ask (a script, CI) it stops and names the flags.
+async function chooseScope(args: readonly string[]): Promise<'user' | 'project'> {
+  const flags = new Set(args)
+  const known = args.every((arg) => arg === '--user' || arg === '--project')
+  if (!known || flags.size > 1) {
+    console.error('deeptokens: init takes --user or --project, and only one of them')
+    process.exit(2)
+  }
+  if (flags.has('--user')) return 'user'
+  if (flags.has('--project')) return 'project'
+  if (!process.stdin.isTTY) {
+    console.error(
+      'deeptokens: init needs to know where to install, and there is no terminal to ask on.\n' +
+        `  init --user      every repo you open (${USER_CONFIG_LABEL} and your own CLAUDE.md)\n` +
+        '  init --project   this repo only (.mcp.json and CLAUDE.md here, for a team to commit)',
+    )
+    process.exit(2)
+  }
+  const prompt = createInterface({ input: process.stdin, output: process.stdout })
+  try {
+    console.log(
+      'Do you want to install deeptokens at the user level or the project level?\n' +
+        '  user     every repo you open, nothing to approve\n' +
+        '  project  this repo only, in files a team can commit',
+    )
+    for (;;) {
+      const answer = (await prompt.question('user or project: ')).trim().toLowerCase()
+      if (answer === 'user' || answer === 'u') return 'user'
+      if (answer === 'project' || answer === 'p') return 'project'
+    }
+  } catch {
+    // Ctrl+D or Ctrl+C at the question: readline rejects, and a stack trace is no answer to that.
+    console.error('\ndeeptokens: init cancelled, nothing was changed')
+    process.exit(130)
+  } finally {
+    prompt.close()
+  }
 }
 
 let fleet: Fleet

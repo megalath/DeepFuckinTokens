@@ -6,7 +6,7 @@ import { promisify } from 'node:util'
 
 import { describe, expect, it } from 'vitest'
 
-import { initRepo } from '../init.js'
+import { initRepo, initUser, type ClaudeResult } from '../init.js'
 
 const run = promisify(execFile)
 
@@ -88,5 +88,90 @@ describe('setting a repo up', () => {
     const dir = await tmpDir({ git: false })
     await expect(initRepo(dir)).rejects.toMatchObject({ code: 'git-failed' })
     await expect(read(dir, '.mcp.json')).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+})
+
+/** Stands in for the `claude` CLI: records what init asked of it and answers as scripted. */
+function fakeClaude(result: ClaudeResult): {
+  readonly calls: (readonly string[])[]
+  readonly runClaude: (args: readonly string[]) => Promise<ClaudeResult>
+} {
+  const calls: (readonly string[])[] = []
+  return {
+    calls,
+    runClaude: async (args) => {
+      calls.push(args)
+      return Promise.resolve(result)
+    },
+  }
+}
+
+const ADDED = { code: 0, output: 'Added stdio MCP server deeptokens to user config' }
+const EXISTS = { code: 1, output: 'MCP server deeptokens already exists in user config' }
+
+describe('setting every repo up at the user level', () => {
+  it('registers the server with Claude Code and writes the note it loads everywhere', async () => {
+    const claudeDir = await tmpDir({ git: false })
+    const claude = fakeClaude(ADDED)
+
+    const report = await initUser({ claudeDir, runClaude: claude.runClaude })
+
+    expect(claude.calls).toEqual([
+      ['mcp', 'add', '--scope', 'user', 'deeptokens', '--', 'npx', '-y', '@deeptokens/mcp@latest'],
+    ])
+    expect(report).toEqual({
+      mcpConfig: { path: 'Claude Code user config', outcome: 'added' },
+      claudeMd: { path: join(claudeDir, 'CLAUDE.md'), outcome: 'added' },
+    })
+    expect(await read(claudeDir, 'CLAUDE.md')).toMatch(
+      /^<!-- deeptokens:start -->\n## deeptokens\n/,
+    )
+  })
+
+  it('changes nothing the second time', async () => {
+    const claudeDir = await tmpDir({ git: false })
+    await initUser({ claudeDir, runClaude: fakeClaude(ADDED).runClaude })
+    const before = await read(claudeDir, 'CLAUDE.md')
+
+    const report = await initUser({ claudeDir, runClaude: fakeClaude(EXISTS).runClaude })
+
+    expect([report.mcpConfig.outcome, report.claudeMd.outcome]).toEqual(['present', 'present'])
+    expect(await read(claudeDir, 'CLAUDE.md')).toBe(before)
+  })
+
+  it('keeps what the user CLAUDE.md already holds', async () => {
+    const claudeDir = await tmpDir({ git: false })
+    await writeFile(join(claudeDir, 'CLAUDE.md'), '# mine\n')
+
+    await initUser({ claudeDir, runClaude: fakeClaude(ADDED).runClaude })
+
+    expect(await read(claudeDir, 'CLAUDE.md')).toMatch(/^# mine\n\n<!-- deeptokens:start -->\n/)
+  })
+
+  it('creates the config directory on a machine that has none yet', async () => {
+    const claudeDir = join(await tmpDir({ git: false }), 'nested', '.claude')
+
+    await initUser({ claudeDir, runClaude: fakeClaude(ADDED).runClaude })
+
+    expect(await read(claudeDir, 'CLAUDE.md')).toContain('pi_spawn')
+  })
+
+  it('writes no note when Claude Code refuses the server', async () => {
+    const claudeDir = await tmpDir({ git: false })
+    const refused = fakeClaude({ code: 1, output: 'error: unknown option --scope' })
+
+    await expect(initUser({ claudeDir, runClaude: refused.runClaude })).rejects.toThrow(
+      /`claude mcp add` failed \(exit 1\): error: unknown option --scope/,
+    )
+    await expect(read(claudeDir, 'CLAUDE.md')).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it('writes no note when claude cannot be run at all', async () => {
+    const claudeDir = await tmpDir({ git: false })
+    const missing = async (): Promise<ClaudeResult> =>
+      Promise.reject(new Error('spawn claude ENOENT'))
+
+    await expect(initUser({ claudeDir, runClaude: missing })).rejects.toThrow('spawn claude ENOENT')
+    await expect(read(claudeDir, 'CLAUDE.md')).rejects.toMatchObject({ code: 'ENOENT' })
   })
 })
