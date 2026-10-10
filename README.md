@@ -65,7 +65,7 @@ between the `deeptokens:start` and `deeptokens:end` markers in `~/.claude/CLAUDE
 project install, delete the `deeptokens` entry from `.mcp.json` and the same block from `CLAUDE.md`.
 
 `@latest` makes `npx` ask the registry for the newest release each time the server starts, so
-restarting Claude Code is the whole update. Pin a release with `@deeptokens/mcp@0.1.0` instead.
+restarting Claude Code is the whole update. Pin a release with `@deeptokens/mcp@0.2.0` instead.
 
 ### From source
 
