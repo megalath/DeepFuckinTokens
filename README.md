@@ -24,26 +24,48 @@ On a machine without a browser, pi prints the sign-in link; open it anywhere, si
 URL your browser lands on (a dead `127.0.0.1:1455` page) back into pi. pi also accepts
 `OPENAI_API_KEY` for the `openai` provider, billed to the API instead of your subscription.
 
-Then, in the git repo you want workers in, from the directory you open Claude Code in:
+Then set Claude Code up:
 
 ```bash
 npx -y @deeptokens/mcp init
 ```
 
-`init` does two things and prints each file it wrote. Run it again and it changes nothing.
+`init` asks whether to install at the user level or the project level, then prints what it wrote.
+Run it again and it changes nothing. `init --user` and `init --project` answer the question up
+front, and a script or CI job has to pass one of them, since there is no terminal to ask on.
 
-- Adds the `deeptokens` server to `.mcp.json`, so Claude Code starts it with
-  `npx -y @deeptokens/mcp@latest`.
+|                    | User level                                                       | Project level                                                     |
+| ------------------ | ---------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Reaches            | Every git repo you open, worktrees included                      | The one repo you ran it in                                        |
+| Server goes in     | Claude Code's user config, through `claude mcp add --scope user` | `.mcp.json`                                                       |
+| Note goes in       | `~/.claude/CLAUDE.md`                                            | `CLAUDE.md` in the repo                                           |
+| Approval           | None                                                             | Claude Code asks once per directory before it starts the server   |
+| Shared with a team | No, it is your machine only                                      | Yes, commit both files                                            |
+| Needs              | `claude` on PATH                                                 | Run from the directory you open Claude Code in, inside a git repo |
+
+Pick the user level if you want workers wherever you work. Pick the project level to give one repo's
+team the same setup. A project install that is not committed is missing from every git worktree of
+that repo, and Claude Code skips the server without a message until you approve it, so on one
+person's machine the user level is the one that just works.
+
+Either way `init` does two things:
+
+- Registers the `deeptokens` server, so Claude Code starts it with `npx -y @deeptokens/mcp@latest`.
 - Adds a short note to `CLAUDE.md` telling Claude to hand suitable work to the workers. Without it
   Claude has the tools and does the work itself: in test runs it never delegated on the server's
   own instructions, and always did with the note.
 
-Open Claude Code there, approve the `deeptokens` server, and ask Claude to call `pi_models` to
-confirm the login. Workers run against the repo Claude Code was started in, and the server does not
-start outside a git repository. Commit both files to give the rest of the team the same setup.
+After a user install, restart Claude Code. After a project install, open Claude Code in the repo and
+approve the `deeptokens` server. Then ask Claude to call `pi_models` to confirm the login. Workers
+run against the repo Claude Code was started in, and the server does not start outside a git
+repository, so in a directory that is not one Claude Code lists it as failed.
+
+To undo a user install, run `claude mcp remove deeptokens --scope user` and delete the block
+between the `deeptokens:start` and `deeptokens:end` markers in `~/.claude/CLAUDE.md`. To undo a
+project install, delete the `deeptokens` entry from `.mcp.json` and the same block from `CLAUDE.md`.
 
 `@latest` makes `npx` ask the registry for the newest release each time the server starts, so
-restarting Claude Code is the whole update. Pin a release with `@deeptokens/mcp@0.1.0` instead.
+restarting Claude Code is the whole update. Pin a release with `@deeptokens/mcp@0.2.0` instead.
 
 ### From source
 
